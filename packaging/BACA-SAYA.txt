@@ -1,0 +1,185 @@
+BELAJAR YUK!
+Permainan belajar huruf, bicara, dan berhitung untuk balita (Bahasa Indonesia)
+
+===========================================================================
+1. MEMBUKA
+===========================================================================
+
+Klik dua kali  index.html.  Selesai. Tidak perlu internet, tidak perlu
+memasang apa pun. Disarankan memakai Chrome atau Edge.
+
+Ketuk layar sekali agar suara sapaan "Belajar Yuk!" berbunyi (browser tidak
+mengizinkan suara sebelum ada sentuhan pertama).
+
+
+===========================================================================
+2. MEMASANG DI INTERNET (seret dan lepas)
+===========================================================================
+
+Cara termudah tanpa akun teknis:
+
+  1. Buka  https://app.netlify.com/drop
+  2. Seret SELURUH folder ini ke halamannya.
+  3. Anda mendapat alamat web yang bisa dibuka di HP atau tablet.
+
+Bisa juga ke hosting statis mana pun (GitHub Pages, Cloudflare Pages, dsb.):
+cukup unggah isi folder ini apa adanya.
+
+Kalau sudah mengganti suara atau gambar, jalankan Perbarui-Media.bat
+(langkah 3) SEBELUM mengunggah.
+
+
+===========================================================================
+3. MENGGANTI SUARA DAN GAMBAR SENDIRI
+===========================================================================
+
+Tiga langkah, tanpa mengubah kode:
+
+  1. Taruh berkas di folder media\audio  (suara)  atau  media\images  (gambar)
+     dengan nama yang benar (lihat daftar di bawah).
+  2. Klik dua kali  Perbarui-Media.bat.
+  3. Buka index.html lalu muat ulang (F5).
+
+Apa pun yang belum Anda ganti tetap memakai suara dan gambar bawaan, jadi
+boleh dicicil satu per satu, dalam urutan apa saja.
+
+
+--- SUARA  (folder media\audio) ------------------------------------------
+
+  letters\id\a.mp3 ... z.mp3     Nama huruf, Bahasa Indonesia  (a, be, ce ...)
+  letters\en\a.mp3 ... z.mp3     Nama huruf, Bahasa Inggris    (ay, bee, see ...)
+  words\apel.mp3                 Kata di Belajar Bicara
+  numbers\1.mp3 ... 10.mp3       Angka di Berhitung  (satu ... sepuluh)
+  praise\apa-saja.mp3            Pujian. Berapa pun jumlahnya, nama bebas.
+                                 Satu dipilih acak setiap kali.
+  phrases\greeting.mp3           "Belajar Yuk!" saat layar utama terbuka
+  phrases\ayo-hitung.mp3         "Ayo hitung!" saat ronde berhitung dimulai
+  ui\pop.mp3                     Bunyi saat objek diketuk
+  ui\tap.mp3                     Bunyi saat tombol panah ditekan
+  ui\chime.mp3                   Bunyi saat satu ronde selesai
+
+Format yang bisa dipakai: mp3, wav, ogg, m4a, webm, aac.
+
+PENTING untuk iPhone/iPad: pakai mp3 atau m4a saja. Safari tidak selalu bisa
+memutar ogg dan webm, dan aplikasi tidak akan memberi tahu - suaranya hanya
+diam. mp3 terputar di semua perangkat.
+
+--- GAMBAR  (folder media\images) ----------------------------------------
+
+  words\apel.png                 Gambar kartu di Belajar Bicara
+  counting\apel.png              Objek yang diketuk di Berhitung
+  home\huruf.png                 Kartu layar utama: huruf, bicara, hitung
+  home\bicara.png
+  home\hitung.png
+
+Format yang bisa dipakai: png, jpg, jpeg, webp, svg, gif, avif.
+
+--- ATURAN NAMA BERKAS ---------------------------------------------------
+
+Nama berkas = kata tersebut, HURUF KECIL SEMUA, spasi dan tanda baca diganti
+tanda hubung (-):
+
+    Apel      ->  apel.mp3
+    Es Krim   ->  es-krim.mp3
+    X-Ray     ->  x-ray.mp3
+
+Untuk folder counting, pakai nama objeknya: apel, bintang, ikan, hati, bunga,
+pisang, telur, wortel, kue, kucing.
+
+Nama yang salah eja TIDAK menimbulkan pesan galat - berkasnya hanya tidak
+dipakai. Karena itu ada halaman pemeriksa (langkah 4).
+
+
+===========================================================================
+4. MEMERIKSA HASILNYA
+===========================================================================
+
+Buka index.html, lalu tambahkan  #media  di ujung alamat, misalnya:
+
+    file:///C:/.../Belajar-Yuk/index.html#media
+
+Halaman itu menampilkan:
+  - setiap slot suara dan gambar, mana yang sudah ada dan mana yang belum
+  - tombol putar untuk mencoba tiap rekaman
+  - untuk slot yang belum ada: kalimat yang harus diucapkan
+  - daftar berkas yang "Terdaftar, tapi tidak dipakai" - hampir selalu salah
+    eja. Perbaiki namanya, jalankan Perbarui-Media.bat lagi.
+
+Halaman ini tidak punya tautan di aplikasi, jadi anak tidak akan membukanya
+tanpa sengaja.
+
+
+===========================================================================
+5. TIPS MEREKAM
+===========================================================================
+
+  - Satu kata per berkas. Jangan digabung; aplikasi yang mengatur urutannya.
+  - Potong hening di awal berkas. Jeda sebelum suara terdengar seperti lag.
+  - Rekam mono, cukup 44,1 kHz. Berkas kecil = mulai lebih cepat.
+  - Untuk pujian, rekam 3-5 versi berbeda agar tidak membosankan.
+  - Gambar berlatar TRANSPARAN (png/webp/svg) paling aman, berbentuk
+    bujur sangkar sekitar 512 x 512 piksel. Garis tebal dan bentuk sederhana
+    lebih mudah dikenali anak daripada foto yang ramai.
+
+
+===========================================================================
+6. TANPA SUARA INDONESIA DI PERANGKAT?
+===========================================================================
+
+Jika perangkat tidak punya suara Bahasa Indonesia, aplikasi memakai suara
+Inggris dengan ejaan pendekatan. Hasilnya lumayan, tetapi tidak sempurna.
+Dua cara memperbaikinya:
+
+  A. Rekam suara sendiri (langkah 3). Paling tepat, dan tidak bergantung pada
+     perangkat mana pun.
+  B. Windows: Settings > Time & language > Language & region > tambahkan
+     Bahasa Indonesia > Language options > Speech. Lalu muat ulang halaman.
+
+
+===========================================================================
+7. DI HP DAN TABLET (iPhone, iPad, Android)
+===========================================================================
+
+Klik dua kali index.html hanya untuk komputer. Di HP/tablet, pasang dulu di
+internet (langkah 2), lalu buka alamat webnya di Safari (iPhone/iPad) atau
+Chrome (Android).
+
+Agar tampil seperti aplikasi, tanpa bilah browser:
+  iPhone/iPad : Safari > tombol Bagikan > Tambah ke Layar Utama
+  Android     : Chrome > menu tiga titik > Tambahkan ke layar utama
+
+Catatan:
+  - Ketuk layar sekali agar sapaan berbunyi. iPhone dan Android tidak
+    mengizinkan suara sebelum ada sentuhan.
+  - Tidak ada suara di iPhone? Periksa tombol samping (senyap/silent) dan
+    volume. Coba juga nyalakan suara media, bukan hanya nada dering.
+  - Suara Bahasa Indonesia: iPhone/iPad biasanya sudah punya (Settings >
+    Accessibility > Spoken Content > Voices > Indonesian). Android memakai
+    mesin suara Google; pastikan Bahasa Indonesia terpasang di
+    Settings > Sistem > Bahasa > Teks-ke-ucapan.
+  - Aplikasi ini belum bisa dipakai tanpa internet. Setelah dimuat sekali
+    ia berjalan, tetapi membuka ulang butuh sambungan.
+
+
+===========================================================================
+8. MASALAH UMUM
+===========================================================================
+
+Rekaman saya tidak terdengar
+  -> Sudah menjalankan Perbarui-Media.bat dan memuat ulang (F5)?
+  -> Buka index.html#media. Kalau berkasnya ada di daftar "tidak dipakai",
+     nama filenya salah eja.
+
+Perbarui-Media.bat langsung tertutup / tidak jalan
+  -> Klik kanan > Run as administrator TIDAK diperlukan. Pastikan berkas ini
+     berada satu folder dengan index.html dan folder media.
+  -> Tanpa Windows? Buka media\manifest.js di Notepad dan tulis daftarnya
+     sendiri, satu berkas per baris, mis.  "words/apel.mp3",
+
+Halaman kosong / putih
+  -> Buka lewat index.html langsung dari folder ini, bukan dari dalam file
+     zip. Ekstrak dulu (klik kanan > Extract All).
+
+Tombol EN/ID di Mengenal Huruf tidak mengubah suara
+  -> Pilihan itu tersimpan di browser. Kalau ada rekaman letters\en atau
+     letters\id, rekaman itulah yang dipakai.
