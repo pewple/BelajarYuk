@@ -104,11 +104,27 @@ class FakeGain extends FakeAudioNode {
   gain = new FakeAudioParam();
 }
 
+/** Stands in for the noise burst behind the register's "ka". */
+class FakeBufferSource extends FakeAudioNode {
+  buffer: unknown = null;
+  start() {}
+  stop() {}
+}
+
+class FakeBiquadFilter extends FakeAudioNode {
+  type = 'lowpass';
+  frequency = { value: 0 };
+  Q = { value: 0 };
+}
+
 export const playedToneCounts = { value: 0 };
+/** Noise bursts started - the "ka" half of the register sound. */
+export const playedNoiseCounts = { value: 0 };
 
 class FakeAudioContext {
   state: AudioContextState = 'running';
   currentTime = 0;
+  sampleRate = 44100;
   destination = new FakeAudioNode();
   createOscillator() {
     playedToneCounts.value += 1;
@@ -116,6 +132,16 @@ class FakeAudioContext {
   }
   createGain() {
     return new FakeGain();
+  }
+  createBuffer(_channels: number, length: number) {
+    return { getChannelData: () => new Float32Array(length) };
+  }
+  createBufferSource() {
+    playedNoiseCounts.value += 1;
+    return new FakeBufferSource();
+  }
+  createBiquadFilter() {
+    return new FakeBiquadFilter();
   }
   resume() {
     this.state = 'running';
@@ -127,6 +153,23 @@ class FakeAudioContext {
 }
 
 vi.stubGlobal('AudioContext', FakeAudioContext);
+
+/**
+ * jsdom leaves `HTMLMediaElement.play()` unimplemented: it logs a complaint and
+ * never fires `ended`. The app's voice queue waits for `ended` before starting
+ * the next step, so one recorded clip would stall every sentence behind it.
+ * This plays like a real element - it records what was played, then ends.
+ */
+export const playedClips: string[] = [];
+
+Object.defineProperty(window.HTMLMediaElement.prototype, 'play', {
+  configurable: true,
+  value: function play(this: HTMLMediaElement) {
+    playedClips.push(this.getAttribute('src') ?? this.src);
+    setTimeout(() => this.dispatchEvent(new Event('ended')), 0);
+    return Promise.resolve();
+  },
+});
 
 /** Stand-in for media/manifest.js, which the real page loads before the app. */
 export function setMediaManifest(manifest: { audio?: unknown; images?: unknown } | undefined): void {
@@ -143,8 +186,10 @@ afterEach(() => {
   window.history.replaceState(null, '', window.location.pathname);
   spokenTexts.length = 0;
   spokenUtterances.length = 0;
+  playedClips.length = 0;
   installedVoices.length = 0;
   playedToneCounts.value = 0;
+  playedNoiseCounts.value = 0;
   // The letter-language preference is deliberately persisted, so without
   // this a test that flips it to English leaks into every test after it.
   try {

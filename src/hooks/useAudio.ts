@@ -59,7 +59,7 @@ const TODDLER_PROSODY: Required<Omit<SpeakOptions, 'lang'>> = {
 };
 
 /** Excited prosody used for praise and for announcing a finished count. */
-const CHEER_PROSODY: Required<Omit<SpeakOptions, 'lang'>> = {
+export const CHEER_PROSODY: Required<Omit<SpeakOptions, 'lang'>> = {
   rate: 0.85,
   pitch: 1.35,
   volume: 1,
@@ -166,6 +166,35 @@ export const EN_VOICE_RESPELL: Record<string, string> = {
   keren: 'kuh-ren',
   'wah, pintar': 'wah, peen-tar',
 
+  // Words used to build spoken amounts of money ("dua puluh lima ribu rupiah")
+  ribu: 'ree-boo',
+  seribu: 'suh-ree-boo',
+  ratus: 'rah-toos',
+  seratus: 'suh-rah-toos',
+  puluh: 'poo-looh',
+  belas: 'buh-lahs',
+  sebelas: 'suh-buh-lahs',
+  rupiah: 'roo-pee-ah',
+  harganya: 'hahr-gah-nyah',
+  dibayar: 'dee-bah-yar',
+  kembaliannya: 'kuhm-bah-lee-ahn-nyah',
+  ayo: 'ah-yoh',
+  hitung: 'hee-toong',
+  salah: 'sah-lah',
+  kembali: 'kuhm-bah-lee',
+
+  // The maze
+  ikuti: 'ee-koo-tee',
+  huruf: 'hoo-roof',
+  angka: 'ahng-kah',
+  dari: 'dah-ree',
+  sampai: 'sahm-pie',
+  cari: 'chah-ree',
+  hore: 'hoh-reh',
+  pilih: 'pee-leeh',
+  atau: 'ah-tow',
+  acak: 'ah-chahk',
+
   // Letter names (the Indonesian ones, not the English toggle)
   a: 'ah',
   be: 'bay',
@@ -223,16 +252,39 @@ export const EN_VOICE_RESPELL: Record<string, string> = {
   zebra: 'zeh-brah',
 };
 
+/** One entry from the table, keeping any trailing punctuation so "!" keeps its lift. */
+function respellOne(text: string): string | null {
+  const bare = text.replace(/[!.,?]+$/, '');
+  const suffix = text.slice(bare.length);
+  const hit = EN_VOICE_RESPELL[bare.toLowerCase()];
+  return hit === undefined ? null : hit + suffix;
+}
+
 /**
  * The English-voice spelling of `text`, or null when there is none.
- * Trailing punctuation is preserved so an exclamation keeps its lift.
+ *
+ * A whole phrase is looked up first ("belajar yuk"). Failing that, longer text
+ * is respelled word by word - which is what lets "Harganya tiga ribu rupiah.
+ * Dibayar lima ribu rupiah." work without listing every possible sentence -
+ * but only when *every* word is known. One unknown word makes the whole thing
+ * null, because a half-respelled sentence sounds worse than an honest accent.
  */
 export function respellForEnglishVoice(text: string): string | null {
   const trimmed = text.trim();
-  const bare = trimmed.replace(/[!.,?]+$/, '');
-  const suffix = trimmed.slice(bare.length);
-  const hit = EN_VOICE_RESPELL[bare.toLowerCase()];
-  return hit === undefined ? null : hit + suffix;
+
+  const whole = respellOne(trimmed);
+  if (whole !== null) return whole;
+
+  const words = trimmed.split(/\s+/);
+  if (words.length < 2) return null;
+
+  const respelled: string[] = [];
+  for (const word of words) {
+    const hit = respellOne(word);
+    if (hit === null) return null;
+    respelled.push(hit);
+  }
+  return respelled.join(' ');
 }
 
 function pickRandom<T>(items: T[]): T | undefined {
@@ -318,6 +370,47 @@ function playTone(ctx: AudioContext, spec: ToneSpec): void {
   osc.connect(gain).connect(ctx.destination);
   osc.start(t0);
   osc.stop(t0 + duration + 0.03);
+}
+
+type NoiseSpec = {
+  /** Centre of the band of noise that is let through, in Hz. */
+  freq: number;
+  /** Narrowness of that band: higher is more "pitched". */
+  q?: number;
+  delay?: number;
+  duration: number;
+  peak?: number;
+};
+
+/**
+ * A short burst of filtered noise - the "ka" in a cash register's "ka-ching",
+ * which is the mechanical thunk of the drawer, not a musical note.
+ */
+function playNoise(ctx: AudioContext, spec: NoiseSpec): void {
+  const { freq, q = 1, delay = 0, duration, peak = 0.2 } = spec;
+  const t0 = ctx.currentTime + delay;
+
+  const frames = Math.max(1, Math.floor(ctx.sampleRate * duration));
+  const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
+  const samples = buffer.getChannelData(0);
+  for (let i = 0; i < frames; i += 1) samples[i] = Math.random() * 2 - 1;
+
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = freq;
+  filter.Q.value = q;
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.005);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+
+  source.connect(filter).connect(gain).connect(ctx.destination);
+  source.start(t0);
+  source.stop(t0 + duration);
 }
 
 /* ------------------------------------------------------------------ */
@@ -484,6 +577,14 @@ export type AudioApi = {
   playTap: () => void;
   /** Rising arpeggio - task completed. */
   playChime: () => void;
+  /** Bright metallic clink - a piece of money handed over. */
+  playCoin: () => void;
+  /** "Ka-ching" - the register drawer opening. */
+  playRegister: () => void;
+  /** A soft, low "hmm" - not that one. Deliberately gentle, never a buzzer. */
+  playNudge: () => void;
+  /** One praise step (a recorded take if any, else a spoken phrase), for building runs. */
+  praiseStep: () => VoiceStep;
   /** Unlock/resume the AudioContext. Call from a real user gesture. */
   primeAudio: () => void;
   /** False when the browser has no speech synthesis at all. */
@@ -675,6 +776,42 @@ export function useAudio(): AudioApi {
     [playEffect],
   );
 
+  const playCoin = useCallback(
+    () =>
+      playEffect(CLIP_IDS.coin, (ctx) => {
+        // Two inharmonic high partials, the second a hair behind and ringing
+        // longer: that offset is what reads as metal rather than a beep.
+        playTone(ctx, { freq: 2637, type: 'triangle', duration: 0.09, peak: 0.16 });
+        playTone(ctx, { freq: 3520, type: 'sine', delay: 0.045, duration: 0.22, peak: 0.12 });
+      }),
+    [playEffect],
+  );
+
+  const playRegister = useCallback(
+    () =>
+      playEffect(CLIP_IDS.register, (ctx) => {
+        // "Ka": the drawer's thunk. "Ching": a bell, three partials that
+        // decay at different rates so it shimmers instead of buzzing.
+        playNoise(ctx, { freq: 1600, q: 0.8, duration: 0.07, peak: 0.22 });
+        playTone(ctx, { freq: 2093, type: 'sine', delay: 0.08, duration: 0.9, peak: 0.13 });
+        playTone(ctx, { freq: 3136, type: 'sine', delay: 0.08, duration: 0.65, peak: 0.08 });
+        playTone(ctx, { freq: 4186, type: 'sine', delay: 0.08, duration: 0.4, peak: 0.05 });
+      }),
+    [playEffect],
+  );
+
+  const playNudge = useCallback(
+    () =>
+      playEffect(CLIP_IDS.nudge, (ctx) => {
+        // Two soft sine notes sliding down a third: a questioning "hmm?", not
+        // a rejection. Quiet on purpose - being wrong here should feel like a
+        // small shrug, never like a penalty.
+        playTone(ctx, { freq: 392, type: 'sine', duration: 0.12, peak: 0.09 });
+        playTone(ctx, { freq: 311, type: 'sine', delay: 0.1, duration: 0.2, peak: 0.08 });
+      }),
+    [playEffect],
+  );
+
   return {
     playVoice,
     speak,
@@ -689,6 +826,10 @@ export function useAudio(): AudioApi {
     playPop,
     playTap,
     playChime,
+    playCoin,
+    playRegister,
+    playNudge,
+    praiseStep,
     primeAudio,
     isSpeechSupported,
     hasIndonesianVoice,

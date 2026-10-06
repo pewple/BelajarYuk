@@ -52,10 +52,47 @@ export function clipCount(prefix: string): number {
 export const CLIP_IDS = {
   greeting: 'phrases/greeting',
   countPrompt: 'phrases/ayo-hitung',
+  changePrompt: 'phrases/ayo-hitung-kembalian',
   pop: 'ui/pop',
   tap: 'ui/tap',
   chime: 'ui/chime',
+  coin: 'ui/coin',
+  register: 'ui/register',
+  nudge: 'ui/nudge',
 } as const;
+
+/** The few fixed words of the maze. Its letters and numbers reuse the existing clips. */
+export const MAZE_CLIP_IDS = {
+  followLetters: 'maze/ikuti-huruf',
+  followNumbers: 'maze/ikuti-angka',
+  until: 'maze/sampai',
+  findLetter: 'maze/cari-huruf',
+  findNumber: 'maze/cari-angka',
+  hooray: 'maze/hore',
+  // The picker: "Pilih huruf, angka, atau acak!"
+  choose: 'maze/pilih',
+  letters: 'maze/huruf',
+  numbers: 'maze/angka',
+  or: 'maze/atau',
+  random: 'maze/acak',
+} as const;
+
+/**
+ * The few fixed words of the cash register module. The amounts themselves are
+ * `money/<rupiah>` clips - see `moneyClipId`.
+ */
+export const MONEY_CLIP_IDS = {
+  price: 'money/harganya',
+  paid: 'money/dibayar',
+  change: 'money/kembaliannya',
+  rupiah: 'money/rupiah',
+  wrong: 'money/salah-hitung-kembali',
+} as const;
+
+/** A spoken amount, e.g. 3000 -> "money/3000" for a recording of "tiga ribu". */
+export function moneyClipId(amount: number): string {
+  return `money/${amount}`;
+}
 
 export function letterClipId(letter: string, lang: string): string {
   return `letters/${lang}/${slugify(letter)}`;

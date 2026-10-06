@@ -1,7 +1,9 @@
 # Belajar Yuk!
 
 Aplikasi belajar interaktif berbahasa Indonesia untuk balita usia ±3 tahun.
-Tiga permainan: **Mengenal Huruf**, **Belajar Bicara**, dan **Berhitung 1–10**.
+Lima permainan: **Mengenal Huruf**, **Belajar Bicara**, **Berhitung 1–10**,
+**Labirin** (mengikuti urutan huruf atau angka sampai ke tujuan), dan **Kasir**
+(menghitung uang kembalian selangkah demi selangkah).
 
 Tidak butuh file audio — semua suara bawaan dihasilkan saat aplikasi berjalan
 (Web Speech API untuk pengucapan, Web Audio API untuk efek suara). Suara dan
@@ -58,13 +60,18 @@ src/
   hooks/useAudio.ts        Web Speech (id-ID / en-US) + efek suara Web Audio
   hooks/useArrowKeys.ts    Navigasi papan ketik untuk kartu
   data/curriculum.ts       Huruf A-Z, kartu kata A-Z, set objek berhitung, tema warna
-  data/navigation.ts       Tiga pilihan di layar utama
+  data/navigation.ts       Empat pilihan di layar utama
+  data/money.ts            Pembeli, pecahan uang, "seribu"/"dua belas ribu", hitung maju
+  data/maze.ts             Tingkat labirin, pembuat labirin berbasis rute, aturan ketukan
   media/manifest.ts        Membaca media/manifest.js saat aplikasi berjalan
   media/clips.ts           Rekaman suara sendiri -> menggantikan mesin suara
   media/pictures.ts        Gambar sendiri -> menggantikan ikon lucide
   media/slots.ts           Daftar lengkap semua slot yang bisa diganti
-  components/              ScreenFrame, StepButton, PulseRing, LangToggle, CardArt, Celebration
-  screens/                 Home, Alphabet, Pronunciation, Counting, MediaCheck (#media)
+  media/voiceParts.ts      Kalimat disusun dari potongan (rekaman bila ada, kalau tidak suara mesin)
+  media/moneyVoice.ts      Kalimat kasir
+  media/mazeVoice.ts       Kalimat labirin
+  components/              ScreenFrame, StepButton, PulseRing, LangToggle, CardArt, MoneyPiece, Celebration
+  screens/                 Home, Alphabet, Pronunciation, Counting, Labirin, Kasir, MediaCheck (#media)
   test/                    Setup jsdom + tes integrasi
 public/media/              Suara dan gambar sendiri (audio/, images/, manifest.js)
 packaging/                 Berkas untuk pengguna akhir: Perbarui-Media.bat/.ps1, BACA-SAYA.txt
@@ -103,6 +110,55 @@ dengan instruksi lisan **"Ayo hitung!"** — anak belum bisa membaca petunjuk di
 layar. Ketukan terakhir kebetulan adalah jumlah totalnya, sehingga totalnya bisa
 diumumkan langsung. Susunan objek dibuat mudah dikenali polanya: 4 sebagai
 persegi 2×2, 10 sebagai dua baris lima.
+
+**Labirin: mengikuti urutan.** Sebelum mulai, ada layar pilihan: **Huruf**,
+**Angka**, atau **Acak** (Acak = tiap labirin dilempar koin, hurufnya atau angkanya).
+Pilihan ini tidak diingat — setiap masuk, ditanya lagi. Satu tingkat punya bentuk
+yang sama untuk huruf maupun angka; yang berbeda hanya tulisannya.
+
+Jalan menuju tujuan dilapisi huruf berurutan
+(A B C ...) atau angka berurutan (1 2 3 ...). Awalnya kotak pertama menampilkan
+hurufnya/angkanya sendiri dan gambar hewan hanya kecil di pojok; kotak itu
+bergoyang pelan sebagai ajakan "mulai dari sini". **Ketuk kotak pertama** untuk
+memulai: baru saat itu hewan pindah ke tengah dan membesar. Sebelum itu, ketukan di
+kotak lain diabaikan. Di papan ketik, tekan panah apa saja sebagai ketukan pertama.
+Setelahnya, anak mengetuk kotak di sebelah
+hewan yang berisi huruf/angka *berikutnya*. Cabang buntu berisi huruf/angka di
+luar urutan, jadi di setiap persimpangan anak harus tahu apa yang datang
+selanjutnya — itulah yang dilatih, bukan sekadar mengikuti dinding. Mengetuk
+cabang buntu dijawab dengan bunyi lembut, kotak bergoyang, dan petunjuk lisan
+("Cari huruf be!") — bukan hukuman — lalu kotak yang benar menyala sebentar.
+Sorotan itu sengaja muncul *setelah* salah ketuk; kalau selalu menyala, tidak ada
+yang perlu dipikirkan. Labirin dibuat dari rute dulu (rute yang berkelok dan tidak
+pernah menempel dengan dirinya sendiri), lalu cabang buntu ditambahkan, sehingga
+papan selalu berupa pohon: hanya ada satu jalan, tanpa putaran. Angka dibatasi
+sampai 10 — angka yang sudah dikenal dari Berhitung.
+
+**Kasir: menghitung kembalian.** Pembeli membeli sesuatu dan membayar dengan
+uang yang lebih besar. Anak harus *menghitung sendiri* berapa kembaliannya
+(dibayar − harga) lalu memberikannya dari baki berisi **empat pecahan tetap:
+Rp 500, 1.000, 2.000, dan 5.000**. Soalnya ditampilkan dengan jawaban yang masih
+tersembunyi (`5.000 − 3.500 = ?`) dan baru terbuka setelah benar.
+
+Keempat pecahan selalu ada, di tempat yang sama, untuk setiap pembeli — tidak ada
+yang disembunyikan karena "terlalu besar". Justru karena itu anak *bisa* memberi
+terlalu banyak, dan itulah yang membuat jawabannya harus dipikirkan, bukan
+disodorkan. Aplikasi menjumlahkan **hanya kembalian yang sudah diberikan** (mulai
+dari nol, bukan harga ditambah kembalian), lalu menampilkan dan mengucapkan total
+itu saja: "seribu... seribu lima ratus...". Begitu totalnya melewati yang seharusnya,
+jawabannya "**Salah, hitung kembali**" — bunyi lembut (bukan buzzer), pesan di layar,
+dan langkah yang kelebihan ditandai merah. Hitungan lalu kosong sendiri setelah
+sekitar 2,6 detik (atau segera lewat tombol ulang) dan anak mencoba lagi dengan
+pembeli yang sama. Tidak ada hukuman yang menumpuk. Setiap langkah ditulis seperti
+struk (`1.000 + 500 = 1.500`), dan saat benar "ka-ching" berbunyi serta hitungannya
+ditulis lengkap: `5.000 − 3.500 = 1.500`.
+
+Semua jumlah kelipatan Rp 500, sehingga setiap total terdengar bersih ("seribu lima
+ratus") dan pecahan Rp 500 selalu bisa menuntaskan hitungan — anak bisa kelebihan,
+tapi tidak pernah buntu. Beberapa harga berakhiran 500 supaya pecahan itu benar-benar
+terpakai. Warna uang mengikuti uang kertas Rupiah asli. Ini jauh lebih sulit
+daripada tiga permainan lainnya: cocok untuk anak yang sudah bisa berhitung sampai
+10, bukan untuk usia 3 tahun yang baru mulai.
 
 **Penguatan positif.** Penyelesaian memicu konfeti, arpeggio nada mayor, angka
 yang berubah dari "?" menjadi jumlahnya, dan pujian singkat yang dirotasi

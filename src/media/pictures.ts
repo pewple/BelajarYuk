@@ -30,6 +30,21 @@ export function countingPicture(label: string): string | undefined {
   return pictureUrl(`counting/${slugify(label)}`);
 }
 
+/** Artwork for something bought at the Kasir, e.g. "Es Krim" -> shop/es-krim. */
+export function shopPicture(item: string): string | undefined {
+  return pictureUrl(`shop/${slugify(item)}`);
+}
+
+/** Artwork for a piece of money in the Kasir tray, e.g. 5000 -> money/5000. */
+export function moneyPicture(amount: number): string | undefined {
+  return pictureUrl(`money/${amount}`);
+}
+
+/** Artwork for a maze animal or treat, e.g. "Kura-kura" -> maze/kura-kura. */
+export function mazePicture(name: string): string | undefined {
+  return pictureUrl(`maze/${slugify(name)}`);
+}
+
 /** Artwork for a home screen card, keyed by its screen id. */
 export function homePicture(id: string): string | undefined {
   return pictureUrl(`home/${slugify(id)}`);

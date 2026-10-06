@@ -4,6 +4,8 @@ import { MediaCheckScreen } from './screens/MediaCheckScreen';
 import { AlphabetScreen } from './screens/AlphabetScreen';
 import { PronunciationScreen } from './screens/PronunciationScreen';
 import { CountingScreen } from './screens/CountingScreen';
+import { KasirScreen } from './screens/KasirScreen';
+import { LabirinScreen } from './screens/LabirinScreen';
 import { useAudio } from './hooks/useAudio';
 import type { LetterLang } from './hooks/useAudio';
 import type { ScreenId } from './types';
@@ -93,6 +95,10 @@ export default function App() {
       return <PronunciationScreen onHome={goHome} letterLang={letterLang} />;
     case 'hitung':
       return <CountingScreen onHome={goHome} />;
+    case 'labirin':
+      return <LabirinScreen onHome={goHome} letterLang={letterLang} />;
+    case 'kasir':
+      return <KasirScreen onHome={goHome} />;
     case 'home':
     default:
       return (

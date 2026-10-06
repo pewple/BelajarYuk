@@ -34,13 +34,15 @@ describe('Belajar Yuk!', () => {
   // phonetic fallback for devices without one lives in pronunciation.test.tsx.
   beforeEach(() => installVoice('Test Indonesian', 'id-ID'));
 
-  it('mounts and shows the three lesson choices', () => {
+  it('mounts and shows the five lesson choices', () => {
     render(<App />);
 
     expect(screen.getByRole('heading', { name: 'Belajar Yuk!' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Mengenal Huruf/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Belajar Bicara/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Berhitung/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Labirin/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Kasir/ })).toBeInTheDocument();
   });
 
   it('greets with "Belajar Yuk!" once the page has had its first gesture', async () => {

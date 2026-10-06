@@ -48,8 +48,8 @@ cpSync(dist, out, { recursive: true });
 // Kept as plain lists rather than derived from src/media/slots.ts: the packager
 // is dependency-free Node, and these folders almost never change. The media
 // check page (#media) is what actually verifies coverage.
-const AUDIO_FOLDERS = ['letters/id', 'letters/en', 'words', 'numbers', 'praise', 'phrases', 'ui'];
-const IMAGE_FOLDERS = ['words', 'counting', 'home'];
+const AUDIO_FOLDERS = ['letters/id', 'letters/en', 'words', 'numbers', 'maze', 'money', 'praise', 'phrases', 'ui'];
+const IMAGE_FOLDERS = ['words', 'counting', 'maze', 'shop', 'money', 'home'];
 
 for (const folder of AUDIO_FOLDERS) mkdirSync(join(out, 'media', 'audio', folder), { recursive: true });
 for (const folder of IMAGE_FOLDERS) mkdirSync(join(out, 'media', 'images', folder), { recursive: true });
@@ -95,12 +95,30 @@ if (nonAscii.test(readFileSync(join(out, 'Perbarui-Media.ps1'), 'utf8'))) {
 
 let zipped = false;
 {
-  // bsdtar ships with Windows 10+ and macOS; Info-ZIP `zip` covers the rest.
-  const tar = spawnSync('tar', ['-a', '-c', '-f', zip, '-C', releaseRoot, NAME], { stdio: 'ignore' });
-  zipped = tar.status === 0;
+  // bsdtar can write a zip; it ships with Windows 10+ and macOS. Info-ZIP
+  // `zip` covers the rest.
+  //
+  // On Windows the bsdtar is named by its full path on purpose. A bare `tar`
+  // resolves through PATH, and under Git Bash (or any MSYS shell) that finds
+  // GNU tar first - which cannot write zip files, and fails without a word.
+  const tarCandidates = [
+    process.env.SystemRoot && join(process.env.SystemRoot, 'System32', 'tar.exe'),
+    'tar',
+  ].filter(Boolean);
+
+  for (const tar of tarCandidates) {
+    rmSync(zip, { force: true });
+    const result = spawnSync(tar, ['-a', '-c', '-f', zip, '-C', releaseRoot, NAME], { stdio: 'ignore' });
+    if (result.status === 0 && existsSync(zip)) {
+      zipped = true;
+      break;
+    }
+  }
+
   if (!zipped) {
+    rmSync(zip, { force: true });
     const z = spawnSync('zip', ['-r', '-q', zip, NAME], { cwd: releaseRoot, stdio: 'ignore' });
-    zipped = z.status === 0;
+    zipped = z.status === 0 && existsSync(zip);
   }
 }
 

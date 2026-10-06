@@ -12,6 +12,10 @@ import {
   respellForEnglishVoice,
 } from '../hooks/useAudio';
 import { WORD_CARDS } from '../data/curriculum';
+import { MAZE_LEVELS } from '../data/maze';
+import { SPOKEN_AMOUNTS } from '../data/money';
+import { arriveLine, chooseLine, hintLine, instructionLine, stepLine } from '../media/mazeVoice';
+import { changeLine, paidLine, priceLine, promptLine, stepsFor, totalLine, wrongLine } from '../media/moneyVoice';
 
 /**
  * A device with no `id-ID` voice does not fail loudly - the engine quietly
@@ -33,6 +37,59 @@ describe('speaking Indonesian without an Indonesian voice', () => {
 
       const missing = spoken.filter((text) => respellForEnglishVoice(text) === null);
       expect(missing, `no English-voice spelling for: ${missing.join(', ')}`).toEqual([]);
+    });
+
+    it('covers every sentence the cash register can say, for every amount', () => {
+      // Sentences are respelled word by word, so one missing word anywhere
+      // would leave that whole sentence in plain Indonesian for an English voice.
+      const sentence = (parts: Parameters<typeof stepsFor>[0]) =>
+        stepsFor(parts)
+          .map((step) => (step.kind === 'tts' ? step.text : ''))
+          .join(' ');
+
+      const lines = [sentence(promptLine()), sentence(wrongLine())];
+      for (const amount of SPOKEN_AMOUNTS) {
+        lines.push(
+          sentence(priceLine(amount)),
+          sentence(paidLine(amount)),
+          sentence(totalLine(amount)),
+          sentence(changeLine(amount)),
+        );
+      }
+
+      const missing = lines.filter((line) => respellForEnglishVoice(line) === null);
+      expect(missing, `no English-voice spelling for: ${missing.join(' | ')}`).toEqual([]);
+    });
+
+    it('covers every sentence the maze can say, on every level', () => {
+      const textOf = (parts: Parameters<typeof stepsFor>[0]) =>
+        stepsFor(parts)
+          .map((step) => (step.kind === 'tts' ? step.text : ''))
+          .join(' ');
+
+      // Every level can be lined with either kind, so every level x kind.
+      const sentences: string[] = [];
+      for (const level of MAZE_LEVELS) {
+        for (const kind of ['letters', 'numbers'] as const) {
+          const last = level.from + level.length - 1;
+          sentences.push(textOf(instructionLine(level, kind, 'id')), textOf(arriveLine(kind, last, 'id')));
+          for (let value = level.from + 1; value <= last; value += 1) {
+            sentences.push(textOf(hintLine(kind, value, 'id')), textOf(stepLine(kind, value, 'id')));
+          }
+        }
+      }
+      sentences.push(textOf(chooseLine()));
+
+      const missing = [...new Set(sentences)].filter((line) => respellForEnglishVoice(line) === null);
+      expect(missing, `no English-voice spelling for: ${missing.join(' | ')}`).toEqual([]);
+    });
+
+    it('respells a sentence only when it knows every word in it', () => {
+      expect(respellForEnglishVoice('Harganya tiga ribu rupiah.')).toBe(
+        `${EN_VOICE_RESPELL.harganya} ${EN_VOICE_RESPELL.tiga} ${EN_VOICE_RESPELL.ribu} ${EN_VOICE_RESPELL.rupiah}.`,
+      );
+      // One stranger spoils it: better an honest accent than half a respelling.
+      expect(respellForEnglishVoice('Harganya tiga ribu dollar.')).toBeNull();
     });
 
     it('keeps trailing punctuation so an exclamation keeps its lift', () => {

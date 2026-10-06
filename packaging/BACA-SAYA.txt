@@ -58,6 +58,47 @@ boleh dicicil satu per satu, dalam urutan apa saja.
   ui\tap.mp3                     Bunyi saat tombol panah ditekan
   ui\chime.mp3                   Bunyi saat satu ronde selesai
 
+  Labirin (mengikuti urutan huruf atau angka):
+  maze\ikuti-huruf.mp3           "Ikuti huruf dari"   (lalu huruf pertama)
+  maze\ikuti-angka.mp3           "Ikuti angka dari"   (lalu angka pertama)
+  maze\sampai.mp3                "sampai"             (lalu huruf/angka terakhir)
+  maze\cari-huruf.mp3            "Cari huruf"         (lalu huruf yang dicari)
+  maze\cari-angka.mp3            "Cari angka"         (lalu angka yang dicari)
+  maze\hore.mp3                  "Hore, sampai!"
+  maze\pilih.mp3                 Layar pilihan: "Pilih huruf, angka, atau acak!"
+  maze\huruf.mp3                   disusun dari: "Pilih" + "huruf" + "angka" +
+  maze\angka.mp3                   "atau" + "acak"
+  maze\atau.mp3
+  maze\acak.mp3
+  ui\nudge.mp3                   Bunyi lembut saat salah ketuk (jangan bunyi
+                                 "buzzer" - anak tidak boleh merasa dihukum)
+
+  Huruf dan angka di labirin memakai rekaman letters\ dan numbers\ yang sama
+  dengan Mengenal Huruf dan Berhitung, jadi tidak perlu direkam lagi.
+  Kalimatnya disusun dari potongan: "Ikuti angka dari" + "satu" + "sampai" +
+  "delapan". Potongan yang belum direkam dibacakan mesin suara.
+
+  Kasir (uang kembalian):
+  money\500.mp3 ... 20000.mp3    Jumlah uang, per LIMA RATUS: 500 = "lima ratus",
+                                 1000 = "seribu", 1500 = "seribu lima ratus",
+                                 2000 = "dua ribu" ... 20000 = "dua puluh ribu".
+                                 Dipakai untuk harga, uang dibayar, jumlah
+                                 kembalian yang sudah diberikan, dan kembalian
+                                 akhir (40 berkas semuanya; halaman #media
+                                 menunjukkan mana yang masih kurang).
+  money\harganya.mp3             "Harganya"
+  money\dibayar.mp3              "Dibayar"
+  money\kembaliannya.mp3         "Kembaliannya"
+  money\rupiah.mp3               "rupiah"
+  money\salah-hitung-kembali.mp3 "Salah, hitung kembali"  (kembalian kelebihan)
+  phrases\ayo-hitung-kembalian.mp3   "Ayo hitung kembaliannya!"
+  ui\coin.mp3                    Bunyi koin saat uang diberikan
+  ui\register.mp3                Bunyi "ka-ching" saat kembalian sudah benar
+
+  Kalimat kasir disusun dari potongan di atas: "Harganya" + "tiga ribu" +
+  "rupiah". Potongan yang tidak direkam dibacakan oleh mesin suara, jadi
+  boleh merekam sebagian saja.
+
 Format yang bisa dipakai: mp3, wav, ogg, m4a, webm, aac.
 
 PENTING untuk iPhone/iPad: pakai mp3 atau m4a saja. Safari tidak selalu bisa
@@ -68,9 +109,20 @@ diam. mp3 terputar di semua perangkat.
 
   words\apel.png                 Gambar kartu di Belajar Bicara
   counting\apel.png              Objek yang diketuk di Berhitung
-  home\huruf.png                 Kartu layar utama: huruf, bicara, hitung
+  home\huruf.png                 Kartu layar utama: huruf, bicara, hitung, kasir
   home\bicara.png
   home\hitung.png
+  home\kasir.png
+  home\labirin.png
+  maze\kelinci.png               Hewan dan hadiah di Labirin: kelinci, wortel,
+                                 kucing, ikan, anjing, tulang, tupai, kacang,
+                                 kura-kura, daun
+  shop\permen.png                Barang yang dibeli di Kasir: permen, kue, apel,
+                                 es-krim, susu, pisang, buku, roti, mainan,
+                                 kue-tart
+  money\500.png                  Uang di Kasir: 500, 1000, 2000, 5000 (baki
+                                 kembalian) dan 10000, 20000 (hanya muncul
+                                 sebagai uang yang dibayar pembeli)
 
 Format yang bisa dipakai: png, jpg, jpeg, webp, svg, gif, avif.
 

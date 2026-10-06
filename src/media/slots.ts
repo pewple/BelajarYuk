@@ -1,4 +1,6 @@
 import { ALPHABET, COUNTING_SETS, MAX_COUNT, WORD_CARDS } from '../data/curriculum';
+import { MAZE_LEVELS } from '../data/maze';
+import { CHECKOUTS, DENOMINATIONS, SPOKEN_AMOUNTS, formatRupiah, rupiahWords } from '../data/money';
 import { HOME_CHOICES } from '../data/navigation';
 import {
   COUNT_PROMPT_ID,
@@ -7,7 +9,15 @@ import {
   LETTER_NAMES_ID,
   numberWordId,
 } from '../hooks/useAudio';
-import { CLIP_IDS, letterClipId, numberClipId, wordClipId } from './clips';
+import {
+  CLIP_IDS,
+  MAZE_CLIP_IDS,
+  MONEY_CLIP_IDS,
+  letterClipId,
+  moneyClipId,
+  numberClipId,
+  wordClipId,
+} from './clips';
 import { slugify } from './slug';
 
 /**
@@ -87,11 +97,54 @@ export function buildSlots(): SlotCatalogue {
         ],
       },
       {
+        // The maze's letters and numbers are spoken with the clips above
+        // (Nama huruf, Angka di Berhitung), so only its fixed words are here.
+        title: 'Labirin - kata tetap',
+        slots: [
+          { id: MAZE_CLIP_IDS.followLetters, label: 'Perintah: ikuti huruf', say: 'Ikuti huruf dari' },
+          { id: MAZE_CLIP_IDS.followNumbers, label: 'Perintah: ikuti angka', say: 'Ikuti angka dari' },
+          { id: MAZE_CLIP_IDS.until, label: 'Sampai', say: 'sampai' },
+          { id: MAZE_CLIP_IDS.findLetter, label: 'Petunjuk: cari huruf', say: 'Cari huruf' },
+          { id: MAZE_CLIP_IDS.findNumber, label: 'Petunjuk: cari angka', say: 'Cari angka' },
+          { id: MAZE_CLIP_IDS.hooray, label: 'Sampai di tujuan', say: 'Hore, sampai!' },
+          // "Pilih huruf, angka, atau acak!" - said on the screen before a maze begins.
+          { id: MAZE_CLIP_IDS.choose, label: 'Pilihan: pilih', say: 'Pilih' },
+          { id: MAZE_CLIP_IDS.letters, label: 'Pilihan: huruf', say: 'huruf' },
+          { id: MAZE_CLIP_IDS.numbers, label: 'Pilihan: angka', say: 'angka' },
+          { id: MAZE_CLIP_IDS.or, label: 'Pilihan: atau', say: 'atau' },
+          { id: MAZE_CLIP_IDS.random, label: 'Pilihan: acak', say: 'acak' },
+        ],
+      },
+      {
+        title: 'Kasir - kata tetap',
+        slots: [
+          { id: MONEY_CLIP_IDS.price, label: 'Harganya', say: 'Harganya' },
+          { id: MONEY_CLIP_IDS.paid, label: 'Dibayar', say: 'Dibayar' },
+          { id: MONEY_CLIP_IDS.change, label: 'Kembaliannya', say: 'Kembaliannya' },
+          { id: MONEY_CLIP_IDS.rupiah, label: 'Rupiah', say: 'rupiah' },
+          { id: MONEY_CLIP_IDS.wrong, label: 'Kembalian kelebihan', say: 'Salah, hitung kembali' },
+          { id: CLIP_IDS.changePrompt, label: 'Perintah menghitung kembalian', say: 'Ayo hitung kembaliannya!' },
+        ],
+      },
+      {
+        // Every harga, uang yang dibayar, total hitungan and kembalian the
+        // register can ever say is one of these twenty.
+        title: 'Kasir - jumlah uang',
+        slots: SPOKEN_AMOUNTS.map((amount) => ({
+          id: moneyClipId(amount),
+          label: formatRupiah(amount),
+          say: rupiahWords(amount),
+        })),
+      },
+      {
         title: 'Efek suara',
         slots: [
           { id: CLIP_IDS.pop, label: 'Objek diketuk (pop)' },
           { id: CLIP_IDS.tap, label: 'Tombol navigasi (tik)' },
           { id: CLIP_IDS.chime, label: 'Ronde selesai (lonceng)' },
+          { id: CLIP_IDS.coin, label: 'Uang diberikan (koin)' },
+          { id: CLIP_IDS.register, label: 'Kembalian benar (ka-ching)' },
+          { id: CLIP_IDS.nudge, label: 'Bukan yang itu (hmm lembut)' },
         ],
       },
     ],
@@ -107,6 +160,25 @@ export function buildSlots(): SlotCatalogue {
           id: `counting/${slugify(set.label)}`,
           label: set.label,
         })),
+      },
+      {
+        title: 'Labirin - hewan dan hadiah',
+        slots: [
+          ...new Map(
+            MAZE_LEVELS.flatMap((level) => [level.hero, level.treat]).map((who) => [who.name, who] as const),
+          ).values(),
+        ].map((who) => ({ id: `maze/${slugify(who.name)}`, label: who.name })),
+      },
+      {
+        title: 'Barang di Kasir',
+        slots: CHECKOUTS.map((checkout) => ({
+          id: `shop/${slugify(checkout.item)}`,
+          label: checkout.item,
+        })),
+      },
+      {
+        title: 'Uang di Kasir',
+        slots: DENOMINATIONS.map((amount) => ({ id: `money/${amount}`, label: formatRupiah(amount) })),
       },
       {
         title: 'Kartu di layar utama',
