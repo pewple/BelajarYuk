@@ -2,6 +2,7 @@ import {
   Apple, Banana, Banknote, Book, Cake, Candy, Coins, Cookie, Croissant, IceCreamCone, Milk, ToyBrick,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { REVIEW_EVERY, reviewOrder } from './review';
 
 /**
  * Everything the cash register ("Kasir") module knows about money.
@@ -55,6 +56,24 @@ export const CHECKOUTS: Checkout[] = [
   { item: 'Mainan', icon: ToyBrick, price: 15500, paid: 20000 },
   { item: 'Kue Tart', icon: Cake, price: 14000, paid: 20000 },
 ];
+
+export { REVIEW_EVERY };
+
+/**
+ * Who is at the till after the one just served.
+ *
+ * Customers come in a fixed order. `sequential` is the place in that order and
+ * only moves when the order itself is followed. Every `REVIEW_EVERY`th customer
+ * is instead one the child got wrong before (if any is due), and that detour
+ * does not lose their place in the order.
+ */
+export function nextCheckout(
+  sequential: number,
+  round: number,
+  weakItems: readonly string[],
+): { index: number; sequential: number } {
+  return reviewOrder(CHECKOUTS.length, sequential, round, (i) => weakItems.includes(CHECKOUTS[i].item));
+}
 
 /**
  * How each piece looks. Gradients follow the colours of the real Indonesian

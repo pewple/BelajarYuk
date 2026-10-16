@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "Belajar Yuk!",
+  "short_name": "Belajar Yuk",
+  "description": "Permainan belajar huruf, bicara, berhitung, pola, labirin, dan kasir dalam Bahasa Indonesia untuk balita.",
+  "lang": "id",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fffbeb",
+  "theme_color": "#fffbeb",
+  "categories": ["education", "kids"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

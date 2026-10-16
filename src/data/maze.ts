@@ -1,6 +1,8 @@
 import { Bone, Carrot, Cat, Dog, Fish, Leaf, Nut, Rabbit, Squirrel, Turtle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ALPHABET, MAX_COUNT } from './curriculum';
+import { HIJAIYAH, alphabetSize, formatNumeral } from './scripts';
+import type { Script } from './scripts';
 
 /**
  * Labirin - a maze whose way through is a sequence.
@@ -145,14 +147,25 @@ export const MAZE_LEVELS: MazeLevel[] = [
 /* Labels                                                              */
 /* ------------------------------------------------------------------ */
 
-/** "A" for letters 1, "7" for numbers 7. */
-export function labelFor(kind: MazeKind, value: number): string {
-  return kind === 'letters' ? ALPHABET[value - 1] : String(value);
+/**
+ * What is written on a tile: "A" for letter 1 and "7" for number 7 in Latin
+ * script; "ا" and "٧" in Arabic.
+ *
+ * `value` is a position, not a glyph - the 3rd letter, the number 3 - which is
+ * why the same level works in every script and the spoken hint can be built
+ * from the value alone.
+ */
+export function labelFor(kind: MazeKind, value: number, script: Script = 'latin'): string {
+  if (kind === 'numbers') return formatNumeral(value, script);
+  return script === 'arab' ? HIJAIYAH[value - 1].glyph : ALPHABET[value - 1];
 }
 
 /** The route's first and last labels, e.g. ["A", "H"] or ["1", "8"]. */
-export function routeEnds(level: MazeLevel, kind: MazeKind): [string, string] {
-  return [labelFor(kind, level.from), labelFor(kind, level.from + level.length - 1)];
+export function routeEnds(level: MazeLevel, kind: MazeKind, script: Script = 'latin'): [string, string] {
+  return [
+    labelFor(kind, level.from, script),
+    labelFor(kind, level.from + level.length - 1, script),
+  ];
 }
 
 /* ------------------------------------------------------------------ */
@@ -277,14 +290,16 @@ function findRoute(level: MazeLevel, rng: () => number): Position[] {
 }
 
 /** Which labels a maze may use for dead ends: anything that is not on the route. */
-function decoyLabels(level: MazeLevel, kind: MazeKind): string[] {
+function decoyLabels(level: MazeLevel, kind: MazeKind, script: Script): string[] {
   const onRoute = new Set(
-    Array.from({ length: level.length }, (_, i) => labelFor(kind, level.from + i)),
+    Array.from({ length: level.length }, (_, i) => labelFor(kind, level.from + i, script)),
   );
   const pool =
     kind === 'letters'
-      ? ALPHABET
-      : Array.from({ length: MAX_DECOY_NUMBER }, (_, i) => String(i + 1));
+      ? script === 'arab'
+        ? HIJAIYAH.map((letter) => letter.glyph)
+        : ALPHABET
+      : Array.from({ length: MAX_DECOY_NUMBER }, (_, i) => formatNumeral(i + 1, script));
   return pool.filter((label) => !onRoute.has(label));
 }
 
@@ -294,15 +309,25 @@ function decoyLabels(level: MazeLevel, kind: MazeKind): string[] {
  * The layout - where the route runs and where the dead ends hang - depends
  * only on the level, never on `kind`: the same level is the same shape as
  * letters or as numbers. Only the labels differ.
+ *
+ * `review` lists letters or numbers (by value, as in `MazeLevel.from`) the
+ * child has been fumbling. Those that are not already on the route are chosen
+ * first for the dead ends, so they turn up where the child must tell them
+ * apart from the right one. It changes which labels appear, never the layout.
  */
-export function buildMaze(level: MazeLevel, kind: MazeKind): Maze {
+export function buildMaze(
+  level: MazeLevel,
+  kind: MazeKind,
+  script: Script = 'latin',
+  review: readonly number[] = [],
+): Maze {
   const { cols, rows, length, from } = level;
 
   const last = from + length - 1;
   if (kind === 'numbers' && last > MAX_COUNT) {
     throw new Error(`Number routes stop at ${MAX_COUNT}, but this one reaches ${last}.`);
   }
-  if (kind === 'letters' && (from < 1 || last > ALPHABET.length)) {
+  if (kind === 'letters' && (from < 1 || last > alphabetSize(script, ALPHABET.length))) {
     throw new Error(`Letter route ${from}-${last} falls outside the alphabet.`);
   }
 
@@ -315,7 +340,7 @@ export function buildMaze(level: MazeLevel, kind: MazeKind): Maze {
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     const route = findRoute(level, rng);
-    const cells = layRoute(level, kind, route);
+    const cells = layRoute(level, kind, script, route);
 
     // A route that leaves too little room for the dead ends the level asks
     // for is thrown away and another is laid. Quietly placing fewer would make
@@ -323,7 +348,10 @@ export function buildMaze(level: MazeLevel, kind: MazeKind): Maze {
     const decoys = addDecoys(level, cells, route, rng);
     if (decoys.length !== level.decoys) continue;
 
-    const labels = shuffled(decoyLabels(level, kind), mulberry32(level.seed + LABEL_STREAM));
+    const labels = shuffled(decoyLabels(level, kind, script), mulberry32(level.seed + LABEL_STREAM));
+    // Stable: the review items move to the front in the order they were asked for.
+    const wanted = review.map((value) => labelFor(kind, value, script));
+    labels.sort((a, b) => Number(wanted.includes(b)) - Number(wanted.includes(a)));
     decoys.forEach((p, i) => {
       cells[p.row * cols + p.col] = { type: 'decoy', label: labels[i] };
     });
@@ -342,12 +370,12 @@ const MAX_ATTEMPTS = 200;
 const LABEL_STREAM = 7919;
 
 /** A board of solid tiles with the route cut through it. */
-function layRoute(level: MazeLevel, kind: MazeKind, route: Position[]): MazeCell[] {
+function layRoute(level: MazeLevel, kind: MazeKind, script: Script, route: Position[]): MazeCell[] {
   const { cols, rows, from } = level;
   const cells: MazeCell[] = Array.from({ length: cols * rows }, () => ({ type: 'wall' }));
 
   route.forEach((p, i) => {
-    cells[p.row * cols + p.col] = { type: 'path', index: i, label: labelFor(kind, from + i) };
+    cells[p.row * cols + p.col] = { type: 'path', index: i, label: labelFor(kind, from + i, script) };
   });
   return cells;
 }
@@ -397,6 +425,16 @@ function addDecoys(level: MazeLevel, cells: MazeCell[], route: Position[], rng: 
 /* ------------------------------------------------------------------ */
 /* Moving                                                              */
 /* ------------------------------------------------------------------ */
+
+/**
+ * True when the animal, standing at `at` on the route, has a dead end right
+ * beside it - a real choice to make. Where there is none, the way on is the
+ * only way and getting it right proves nothing.
+ */
+export function isFork(maze: Maze, at: number): boolean {
+  const here = maze.route[at];
+  return neighbours(maze.cols, maze.rows, here).some((p) => cellAt(maze, p).type === 'decoy');
+}
 
 /**
  * What a tap on `target` means when the child is standing at `at` (an index

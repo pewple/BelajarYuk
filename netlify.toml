@@ -24,6 +24,20 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# The service worker must be re-checked on every visit: it is the thing that
+# delivers updates, so a long-cached copy of it would freeze every device on
+# the version it first saw.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 # Everything else (index.html, and media/ - the recordings, pictures and the
 # manifest listing them) must be re-checked on every visit, or a new recording
 # would not show up until the browser's cache happened to expire.

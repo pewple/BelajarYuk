@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
+import { leaveGame } from './helpers';
 import { CHANGE_PIECES, CHECKOUTS, changeOwed, formatRupiah } from '../data/money';
 import { PRAISE_ID, respellForEnglishVoice } from '../hooks/useAudio';
 import { changeLine, paidLine, priceLine, promptLine, stepsFor, totalLine, wrongLine } from '../media/moneyVoice';
@@ -74,7 +75,7 @@ describe('Kasir', () => {
       render(<App />);
 
       const cards = screen.getAllByRole('button');
-      expect(cards).toHaveLength(5);
+      expect(cards).toHaveLength(6);
       expect(cards[cards.length - 1]).toHaveTextContent('Kasir');
     });
 
@@ -83,7 +84,7 @@ describe('Kasir', () => {
       await openKasir(user);
 
       expect(screen.getByRole('heading', { name: 'Kasir' })).toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: 'Kembali ke menu utama' }));
+      await leaveGame(user);
       expect(screen.getByRole('heading', { name: 'Belajar Yuk!' })).toBeInTheDocument();
     });
   });
@@ -411,13 +412,15 @@ describe('Kasir', () => {
 
     it('repeats the customer\'s words when the count is redone', async () => {
       const user = userEvent.setup();
-      await openAt(user, OWES_1500);
+      await openKasir(user);
       await give(user, 500);
 
       spokenTexts.length = 0;
       await user.click(screen.getByRole('button', { name: 'Ulangi hitungan' }));
 
-      expect(spokenTexts).toContain('Harganya tiga ribu lima ratus rupiah. Dibayar lima ribu rupiah. Ayo hitung kembaliannya!');
+      expect(spokenTexts).toContain(
+        'Harganya seribu lima ratus rupiah. Dibayar dua ribu rupiah. Ayo hitung kembaliannya!',
+      );
       expect(display()).toHaveTextContent('Rp 0');
     });
 

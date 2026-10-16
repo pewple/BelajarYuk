@@ -53,6 +53,14 @@ export const CLIP_IDS = {
   greeting: 'phrases/greeting',
   countPrompt: 'phrases/ayo-hitung',
   changePrompt: 'phrases/ayo-hitung-kembalian',
+  // Said on arriving at Mengenal Huruf and Belajar Bicara, and when a child goes quiet.
+  tapLetter: 'phrases/ketuk-huruf',
+  tapPicture: 'phrases/ketuk-gambar',
+  // "That is enough for now" - the rest screen after a quarter hour.
+  rest: 'phrases/sudah-dulu',
+  // Pola: the instruction, and the nudge after a wrong pick.
+  continuePattern: 'phrases/lanjutkan-pola',
+  tryAgain: 'phrases/coba-lagi',
   pop: 'ui/pop',
   tap: 'ui/tap',
   chime: 'ui/chime',
@@ -96,6 +104,26 @@ export function moneyClipId(amount: number): string {
 
 export function letterClipId(letter: string, lang: string): string {
   return `letters/${lang}/${slugify(letter)}`;
+}
+
+/** A colour's name in Pola, e.g. "colors/merah". */
+export function colorClipId(name: string): string {
+  return `colors/${name}`;
+}
+
+/** An Arabic letter's name, e.g. the letter ب -> "letters/ar/ba". */
+export function arabicLetterClipId(id: string): string {
+  return `letters/ar/${id}`;
+}
+
+/** An Arabic number's name: 3 -> "numbers/ar/3", for a recording of "tsalatsah". */
+export function arabicNumberClipId(n: number): string {
+  return `numbers/ar/${n}`;
+}
+
+/** An Arabic word card's word, e.g. the card for ب -> "words/ar/ba", for a recording of "bab". */
+export function arabicWordClipId(letterId: string): string {
+  return `words/ar/${letterId}`;
 }
 
 export function wordClipId(word: string): string {

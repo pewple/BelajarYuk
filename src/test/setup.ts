@@ -1,7 +1,9 @@
 import '@testing-library/jest-dom/vitest';
-import { afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { reloadMedia } from '../media/manifest';
+import { HINTS_STORAGE_KEY } from '../data/hints';
+import { setTapLockMs } from '../hooks/useTapLock';
 
 /**
  * jsdom ships neither the Web Speech API nor the Web Audio API. The hook is
@@ -177,6 +179,27 @@ export function setMediaManifest(manifest: { audio?: unknown; images?: unknown }
   else window.BELAJAR_MEDIA = manifest;
   reloadMedia();
 }
+
+beforeEach(() => {
+  // Taps in a test come milliseconds apart; the double-tap lock would swallow them.
+  // The lock has its own tests, which switch it back on.
+  setTapLockMs(0);
+
+  // A new child starts with the answer pointed out. Most tests are about the
+  // game itself rather than the hints, so they start from a child who has
+  // already graduated; the hint tests set their own level.
+  try {
+    window.localStorage.setItem(
+      HINTS_STORAGE_KEY,
+      JSON.stringify({
+        labirin: { level: 'independent', streak: 0 },
+        kasir: { level: 'independent', streak: 0 },
+      }),
+    );
+  } catch {
+    /* Storage is optional. */
+  }
+});
 
 afterEach(() => {
   cleanup();

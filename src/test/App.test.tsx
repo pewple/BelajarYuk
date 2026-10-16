@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
+import { leaveGame } from './helpers';
 import { installVoice, spokenTexts, playedToneCounts } from './setup';
 import {
   ALPHABET,
@@ -63,7 +64,7 @@ describe('Belajar Yuk!', () => {
     render(<App />);
 
     await user.click(screen.getByRole('button', { name: /Mengenal Huruf/ }));
-    await user.click(screen.getByRole('button', { name: 'Kembali ke menu utama' }));
+    await leaveGame(user);
 
     expect(screen.getByRole('heading', { name: 'Belajar Yuk!' })).toBeInTheDocument();
   });

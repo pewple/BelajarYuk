@@ -7,6 +7,8 @@ type MoneyPieceProps = {
   onClick: () => void;
   /** Held while a wrong count is being cleared, so a frantic tap cannot land in the wrong round. */
   disabled?: boolean;
+  /** Glows to say "this one next". Only while the child is still being guided. */
+  hinted?: boolean;
 };
 
 /**
@@ -16,7 +18,7 @@ type MoneyPieceProps = {
  * from the first customer to the last - a toddler learns where the coin is
  * by where it always is.
  */
-export function MoneyPiece({ amount, onClick, disabled = false }: MoneyPieceProps) {
+export function MoneyPiece({ amount, onClick, disabled = false, hinted = false }: MoneyPieceProps) {
   const look = PIECE_LOOK[amount];
 
   return (
@@ -25,7 +27,8 @@ export function MoneyPiece({ amount, onClick, disabled = false }: MoneyPieceProp
       onClick={onClick}
       disabled={disabled}
       aria-label={`Tambah ${formatRupiah(amount)}`}
-      className={`toddler-tap flex h-28 w-full flex-col items-center justify-center gap-1 rounded-[2rem] bg-gradient-to-br ${look.theme} px-3 text-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 disabled:opacity-40 disabled:active:scale-100 sm:h-36`}
+      data-hint={hinted ? 'true' : undefined}
+      className={`toddler-tap ${hinted ? 'animate-gentle-bob ring-4 ring-amber-400 ring-offset-2' : ''} flex h-28 w-full flex-col items-center justify-center gap-1 rounded-[2rem] bg-gradient-to-br ${look.theme} px-3 text-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 disabled:opacity-40 disabled:active:scale-100 sm:h-36`}
     >
       <CardArt
         icon={look.icon}

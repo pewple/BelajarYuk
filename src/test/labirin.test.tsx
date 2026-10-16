@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
+import { leaveGame } from './helpers';
 import { MAZE_LEVELS, areNeighbours, buildMaze, cellAt, routeEnds, stepResult } from '../data/maze';
 import type { Maze, MazeKind, Position } from '../data/maze';
 import { ALPHABET } from '../data/curriculum';
@@ -88,10 +89,10 @@ describe('Labirin', () => {
   beforeEach(() => installVoice('Test Indonesian', 'id-ID'));
 
   describe('on the home screen', () => {
-    it('sits after Berhitung and before Kasir', () => {
+    it('sits after Pola and before Kasir', () => {
       render(<App />);
 
-      const titles = ['Mengenal Huruf', 'Belajar Bicara', 'Berhitung', 'Labirin', 'Kasir'];
+      const titles = ['Mengenal Huruf', 'Belajar Bicara', 'Berhitung', 'Pola', 'Labirin', 'Kasir'];
       const order = screen
         .getAllByRole('button')
         .map((button) => titles.find((title) => button.textContent?.includes(title)));
@@ -104,7 +105,7 @@ describe('Labirin', () => {
       await openLabirin(user);
 
       expect(screen.getByRole('heading', { name: 'Labirin' })).toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: 'Kembali ke menu utama' }));
+      await leaveGame(user);
       expect(screen.getByRole('heading', { name: 'Belajar Yuk!' })).toBeInTheDocument();
     });
   });
@@ -176,7 +177,7 @@ describe('Labirin', () => {
     it('is not remembered: going home and back asks again', async () => {
       const user = userEvent.setup();
       await enter(user, 'Angka');
-      await user.click(screen.getByRole('button', { name: 'Kembali ke menu utama' }));
+      await leaveGame(user);
       await user.click(screen.getByRole('button', { name: /Labirin/ }));
 
       expect(screen.getByText('Pilih dulu, lalu mulai')).toBeInTheDocument();
@@ -771,5 +772,49 @@ describe('Labirin', () => {
       expect(spokenTexts).not.toContain('Ikuti angka dari satu sampai empat!');
       expect(playedClips).toEqual(['media/audio/maze/ikuti-angka.mp3', 'media/audio/maze/sampai.mp3']);
     });
+  });
+});
+
+describe('Labirin finish tile', () => {
+  beforeEach(() => installVoice('Test Indonesian', 'id-ID'));
+
+  const sizes = (button: HTMLElement) =>
+    [...button.querySelectorAll('svg')].map((svg) => svg.getAttribute('class') ?? '');
+
+  it('shows its label as the big thing, with the treat small in the corner - like the start tile', async () => {
+    const user = userEvent.setup();
+    const { kind, level } = await enter(user, 'Huruf');
+    const [, last] = routeEnds(level, kind);
+
+    const finish = tile(kind, last);
+    expect(finish).toHaveTextContent(last);
+    const drawn = sizes(finish);
+    expect(drawn).toHaveLength(1);
+    expect(drawn[0]).toContain('size-1/4');
+    expect(drawn[0]).not.toContain('size-3/5');
+  });
+
+  it('keeps that after the maze has started, until the animal arrives', async () => {
+    const user = userEvent.setup();
+    const { kind, level, maze } = await enter(user, 'Angka');
+    const [, last] = routeEnds(level, kind);
+    await start(user, kind, maze);
+    await walk(user, kind, maze, 0, maze.route.length - 2);
+
+    const finish = tile(kind, last);
+    expect(finish).toHaveTextContent(last);
+    expect(sizes(finish).every((c) => c.includes('size-1/4'))).toBe(true);
+  });
+
+  it('shows the animal big when it arrives, with the treat small beside it', async () => {
+    const user = userEvent.setup();
+    const { kind, level, maze } = await enter(user, 'Huruf');
+    const [, last] = routeEnds(level, kind);
+    await start(user, kind, maze);
+    await walk(user, kind, maze, 0, maze.route.length - 1);
+
+    const drawn = sizes(tile(kind, last));
+    expect(drawn.some((c) => c.includes('size-3/5'))).toBe(true);
+    expect(drawn.some((c) => c.includes('size-1/4'))).toBe(true);
   });
 });

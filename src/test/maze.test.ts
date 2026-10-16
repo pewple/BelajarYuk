@@ -11,6 +11,7 @@ import {
   stepResult,
 } from '../data/maze';
 import type { Maze, MazeKind, MazeLevel, Position } from '../data/maze';
+import { HIJAIYAH, SCRIPTS, alphabetSize, toArabicNumerals } from '../data/scripts';
 
 const KINDS: MazeKind[] = ['letters', 'numbers'];
 
@@ -60,9 +61,11 @@ describe('the choice of what a maze is lined with', () => {
 });
 
 describe.each(
-  MAZE_LEVELS.flatMap((level, i) => KINDS.map((kind) => [i + 1, kind, level] as const)),
-)('level %i as %s', (_n, kind, level) => {
-  const maze = buildMaze(level, kind);
+  MAZE_LEVELS.flatMap((level, i) =>
+    KINDS.flatMap((kind) => SCRIPTS.map((script) => [i + 1, kind, script, level] as const)),
+  ),
+)('level %i as %s in %s script', (_n, kind, script, level) => {
+  const maze = buildMaze(level, kind, script);
   const { route } = maze;
   const decoys = maze.cells.filter((c) => c.type === 'decoy');
 
@@ -93,7 +96,7 @@ describe.each(
     it('is lined with consecutive labels, in order', () => {
       route.forEach((p, i) => {
         const cell = cellAt(maze, p);
-        expect(cell).toEqual({ type: 'path', index: i, label: labelFor(kind, level.from + i) });
+        expect(cell).toEqual({ type: 'path', index: i, label: labelFor(kind, level.from + i, script) });
       });
     });
 
@@ -111,7 +114,7 @@ describe.each(
       const last = level.from + level.length - 1;
       expect(level.from).toBeGreaterThanOrEqual(1);
       if (kind === 'numbers') expect(last).toBeLessThanOrEqual(MAX_COUNT);
-      else expect(last).toBeLessThanOrEqual(ALPHABET.length);
+      else expect(last).toBeLessThanOrEqual(alphabetSize(script, ALPHABET.length));
     });
   });
 
@@ -126,10 +129,14 @@ describe.each(
 
       expect(labels.every((label) => label !== '' && !onRoute.has(label))).toBe(true);
       expect(new Set(labels).size).toBe(labels.length);
-      // A letter maze has only letters on it; a number maze, only numbers.
+      // A letter maze has only letters on it; a number maze, only numbers -
+      // and only in the script that was chosen, never a mixture.
       for (const label of labels) {
-        if (kind === 'letters') expect(ALPHABET).toContain(label);
-        else expect(label).toMatch(/^\d+$/);
+        if (kind === 'letters') {
+          expect(script === 'arab' ? HIJAIYAH.map((l) => l.glyph) : ALPHABET).toContain(label);
+        } else {
+          expect(label).toMatch(script === 'arab' ? /^[٠-٩]+$/ : /^\d+$/);
+        }
       }
     });
 
@@ -156,7 +163,7 @@ describe.each(
     });
 
     it('is the same maze every time it is built', () => {
-      expect(buildMaze(level, kind)).toEqual(maze);
+      expect(buildMaze(level, kind, script)).toEqual(maze);
     });
   });
 
@@ -186,6 +193,38 @@ describe.each(
         expect(outcomes.filter((o) => o === 'advance')).toHaveLength(1);
       }
     });
+  });
+});
+
+describe('Arabic labels', () => {
+  it('write a letter route in hijaiyah, in order, and a number route in Arabic-Indic digits', () => {
+    const level = MAZE_LEVELS[0]; // 4 tiles from 1
+
+    // The first four hijaiyah are alif, ba, ta, tsa.
+    expect(routeEnds(level, 'letters', 'arab')).toEqual(['ا', 'ث']);
+    expect(routeEnds(level, 'numbers', 'arab')).toEqual(['١', '٤']);
+    expect(labelFor('letters', 28, 'arab')).toBe('ي');
+    expect(labelFor('numbers', 10, 'arab')).toBe(toArabicNumerals(10));
+  });
+
+  it('can run a letter route as far as the 28th letter', () => {
+    // The alphabet is longer in Arabic, so a Latin-only limit of 26 would wrongly refuse this.
+    const base = MAZE_LEVELS[0];
+    expect(() => buildMaze({ ...base, from: 24, length: 5 }, 'letters', 'arab')).not.toThrow();
+    expect(() => buildMaze({ ...base, from: 24, length: 5 }, 'letters', 'latin')).toThrow(/alphabet/);
+    expect(() => buildMaze({ ...base, from: 25, length: 5 }, 'letters', 'arab')).toThrow(/alphabet/);
+  });
+
+  it('still limit number routes to what the app can say, in either script', () => {
+    const base = MAZE_LEVELS[0];
+    expect(() => buildMaze({ ...base, from: 8, length: 5 }, 'numbers', 'arab')).toThrow(/stop at/);
+  });
+
+  it('keep Latin the default, so nothing that predates Arabic changes', () => {
+    for (const level of MAZE_LEVELS) {
+      expect(buildMaze(level, 'letters')).toEqual(buildMaze(level, 'letters', 'latin'));
+      expect(labelFor('letters', 1)).toBe('A');
+    }
   });
 });
 

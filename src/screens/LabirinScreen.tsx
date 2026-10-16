@@ -4,11 +4,18 @@ import type { LucideIcon } from 'lucide-react';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { Celebration } from '../components/Celebration';
 import { CardArt } from '../components/CardArt';
-import { MAZE_LEVELS, buildMaze, kindFor, routeEnds, stepResult } from '../data/maze';
+import { ScriptToggle } from '../components/ScriptToggle';
+import { MAZE_LEVELS, buildMaze, isFork, kindFor, routeEnds, stepResult } from '../data/maze';
+import { dueForReview, mazeItemKey, mazeItemPrefix, recordResult } from '../data/review';
+import type { Script } from '../data/scripts';
 import type { MazeKind, MazeMode, Position } from '../data/maze';
 import { CHEER_PROSODY, useAudio } from '../hooks/useAudio';
 import type { LetterLang } from '../hooks/useAudio';
 import { useDirectionKeys } from '../hooks/useDirectionKeys';
+import { useHints } from '../hooks/useHints';
+import { useIdleReminder } from '../hooks/useIdleReminder';
+import { useTapLock } from '../hooks/useTapLock';
+import { useGameFinished } from '../state/play';
 import type { Direction } from '../hooks/useDirectionKeys';
 import { mazePicture } from '../media/pictures';
 import { arriveLine, chooseLine, hintLine, instructionLine, stepLine } from '../media/mazeVoice';
@@ -18,6 +25,9 @@ type LabirinScreenProps = {
   onHome: () => void;
   /** Which language letter names are spoken in - the same choice as Mengenal Huruf. */
   letterLang: LetterLang;
+  /** Latin or Arabic: what the tiles are written with, and which names are spoken. */
+  script: Script;
+  onScriptChange: (next: Script) => void;
 };
 
 /** How long the "look here" glow stays on the right tile after a wrong tap. */
@@ -47,8 +57,10 @@ const CHOICES: { mode: MazeMode; title: string; glyph: string; icon: LucideIcon;
  * The glow appears only *after* a wrong tap. Shown from the start it would
  * point at the answer at every fork and there would be nothing to work out.
  */
-export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
+export function LabirinScreen({ onHome, letterLang, script, onScriptChange }: LabirinScreenProps) {
   const { playVoice, praiseStep, playPop, playChime, playNudge, playTap } = useAudio();
+  const { guided, record } = useHints('labirin');
+  const once = useTapLock();
 
   /** What the child chose; null while they are still choosing. */
   const [mode, setMode] = useState<MazeMode | null>(null);
@@ -66,25 +78,50 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
   const [wiggling, setWiggling] = useState<number | null>(null);
 
   const level = MAZE_LEVELS[levelIndex % MAZE_LEVELS.length];
-  const maze = useMemo(() => buildMaze(level, kind), [level, kind]);
+
+  // Letters or numbers the child has fumbled before turn up as dead ends in
+  // this maze. Worked out once per maze - not on every tap, which would
+  // reshuffle the board under their finger as the review book changes.
+  const review = useMemo(
+    () =>
+      mode === null
+        ? []
+        : dueForReview(mazeItemPrefix(kind, script)).map((key) => Number(key.split(':').pop())),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new maze, not a new tap
+    [mode, levelIndex, kind, script],
+  );
+  const maze = useMemo(() => buildMaze(level, kind, script, review), [level, kind, script, review]);
   const { hero, treat } = level;
+  const arabic = script === 'arab';
 
   const lastIndex = maze.route.length - 1;
   const done = started && at === lastIndex;
-  const [first, last] = routeEnds(level, kind);
+  const [first, last] = routeEnds(level, kind, script);
   const noun = kind === 'letters' ? 'Huruf' : 'Angka';
+
+  useGameFinished(done);
+
+  const sayChoose = useCallback(() => playVoice(stepsFor(chooseLine())), [playVoice]);
+  const sayInstruction = useCallback(
+    () => playVoice(stepsFor(instructionLine(level, kind, letterLang, script))),
+    [kind, letterLang, level, playVoice, script],
+  );
 
   // The choice is spoken, not just shown: a pre-reader cannot read "Huruf".
   useEffect(() => {
     if (mode !== null) return;
-    playVoice(stepsFor(chooseLine()));
-  }, [mode, playVoice]);
+    sayChoose();
+  }, [mode, sayChoose]);
 
   // So is the way through: "Ikuti huruf dari a sampai e!"
   useEffect(() => {
     if (mode === null) return;
-    playVoice(stepsFor(instructionLine(level, kind, letterLang)));
-  }, [mode, levelIndex, attempt, level, kind, letterLang, playVoice]);
+    sayInstruction();
+  }, [mode, levelIndex, attempt, sayInstruction]);
+
+  // A child who goes quiet hears it once more.
+  const repeat = mode === null ? sayChoose : sayInstruction;
+  useIdleReminder(!done, `${mode}-${levelIndex}-${attempt}`, repeat);
 
   useEffect(() => {
     if (!hint) return;
@@ -115,8 +152,8 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
   const start = useCallback(() => {
     setStarted(true);
     playPop();
-    playVoice(stepsFor(stepLine(kind, level.from, letterLang)));
-  }, [kind, letterLang, level.from, playPop, playVoice]);
+    playVoice(stepsFor(stepLine(kind, level.from, letterLang, script)));
+  }, [kind, letterLang, level.from, playPop, playVoice, script]);
 
   const tapAt = useCallback(
     (target: Position) => {
@@ -132,11 +169,20 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
       const result = stepResult(maze, at, target);
       if (result === 'ignore') return;
 
+      // Only a real fork - a dead end beside the animal - is a choice worth
+      // counting. Where the way on is the only way, getting it right proves nothing.
+      // The same choice feeds both the hint level and the review book, which
+      // files it under the letter or number that was being looked for.
+      if (isFork(maze, at)) {
+        record(result === 'advance');
+        recordResult(mazeItemKey(kind, script, level.from + at + 1), result === 'advance');
+      }
+
       if (result === 'wrong') {
         playNudge();
         setWiggling(target.row * maze.cols + target.col);
         setHint(true);
-        playVoice(stepsFor(hintLine(kind, level.from + at + 1, letterLang)));
+        playVoice(stepsFor(hintLine(kind, level.from + at + 1, letterLang, script)));
         return;
       }
 
@@ -150,16 +196,16 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
         // the cheer; the cheer and the praise share one uninterrupted run.
         playChime();
         playVoice([
-          ...stepsFor(arriveLine(kind, level.from + next, letterLang), CHEER_PROSODY),
+          ...stepsFor(arriveLine(kind, level.from + next, letterLang, script), CHEER_PROSODY),
           praiseStep(),
         ]);
       } else {
-        playVoice(stepsFor(stepLine(kind, level.from + next, letterLang)));
+        playVoice(stepsFor(stepLine(kind, level.from + next, letterLang, script)));
       }
     },
     [
       at, done, kind, lastIndex, letterLang, level.from, maze, mode, playChime, playNudge, playPop, playVoice,
-      praiseStep, start, started,
+      praiseStep, record, script, start, started,
     ],
   );
 
@@ -203,7 +249,7 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
 
   if (mode === null) {
     return (
-      <ScreenFrame title="Labirin" onHome={onHome} caption="Pilih dulu, lalu mulai">
+      <ScreenFrame title="Labirin" onHome={onHome} onRepeat={repeat} caption="Pilih dulu, lalu mulai">
         <div role="group" aria-label="Pilih isi labirin" className="flex w-full max-w-2xl flex-col gap-4 sm:flex-row">
           {CHOICES.map((choice) => {
             const Icon = choice.icon;
@@ -223,6 +269,10 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
             );
           })}
         </div>
+
+        <div className="mt-8">
+          <ScriptToggle value={script} onChange={onScriptChange} />
+        </div>
       </ScreenFrame>
     );
   }
@@ -241,7 +291,7 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
       : `Ketuk ${first} untuk mulai`;
 
   return (
-    <ScreenFrame title="Labirin" onHome={onHome} caption={caption}>
+    <ScreenFrame title="Labirin" onHome={onHome} onRepeat={repeat} caption={caption}>
       {done && (
         <Celebration
           key={`${levelIndex}-${attempt}`}
@@ -259,12 +309,14 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
             return (
               <li
                 key={i}
-                className={`flex h-9 min-w-9 items-center justify-center rounded-lg px-1.5 text-sm font-black ${
+                className={`flex h-9 min-w-9 items-center justify-center rounded-lg px-1.5 font-black ${
+                  arabic ? 'font-arabic text-xl' : 'text-sm'
+                } ${
                   started && i < at
                     ? 'bg-emerald-200 text-emerald-800'
                     : started && i === at
                       ? 'bg-amber-300 text-amber-900 ring-2 ring-amber-500'
-                      : 'bg-slate-200 text-slate-500'
+                      : 'bg-slate-200 text-slate-600'
                 }`}
               >
                 {label}
@@ -300,7 +352,8 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
             const isHero = started && onRoute && index === at;
             const isVisited = started && onRoute && index < at;
             const isFinish = onRoute && index === lastIndex;
-            const isHinted = hint && onRoute && index === at + 1;
+            // Guided: the way on always glows. Independent: only after a wrong tap.
+            const isHinted = started && (hint || guided) && onRoute && index === at + 1;
             // Before that, the first tile is the one to tap: label showing, animal small.
             const isWaitingStart = !started && onRoute && index === 0;
 
@@ -330,7 +383,7 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
               <button
                 key={i}
                 type="button"
-                onClick={() => tapAt(position)}
+                onClick={() => once(`tile-${i}`, () => tapAt(position))}
                 aria-label={`${noun} ${cell.label}${state}`}
                 data-hint={isHinted ? 'true' : undefined}
                 data-start={isWaitingStart ? 'true' : undefined}
@@ -338,7 +391,12 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
                 // classes on one element would be settled by CSS source order,
                 // not by what was meant. The first tile bobs until it is tapped -
                 // "start here" - which says nothing about where the route goes.
-                className={`toddler-tap relative flex aspect-square items-center justify-center rounded-2xl text-3xl font-black shadow-md outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 sm:text-4xl ${tone} ${
+                lang={arabic ? 'ar' : undefined}
+                // Arabic letters are drawn shorter than Latin ones at the same
+                // font size, so they get a larger size to read as equally big.
+                className={`toddler-tap relative flex aspect-square items-center justify-center rounded-2xl font-black shadow-md outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 ${
+                  arabic ? 'font-arabic text-5xl sm:text-6xl' : 'text-3xl sm:text-4xl'
+                } ${tone} ${
                   isHinted || isWaitingStart ? 'animate-gentle-bob ring-4 ring-amber-400!' : 'ring-2'
                 } ${wiggling === i ? 'animate-wiggle' : ''}`}
               >
@@ -360,15 +418,19 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
                       />
                     )}
                   </>
-                ) : isFinish ? (
+                ) : (
+                  cell.label
+                )}
+
+                {/* The finish, like the start, keeps its label as the big thing:
+                    the treat sits small in the corner until the animal arrives. */}
+                {isFinish && !isHero && (
                   <CardArt
                     icon={treat.icon}
                     picture={treatPicture}
-                    className={`size-3/5 ${treat.color}`}
-                    strokeWidth={2}
+                    className={`absolute top-1 right-1 size-1/4 ${treat.color}`}
+                    strokeWidth={2.4}
                   />
-                ) : (
-                  cell.label
                 )}
 
                 {/* Waiting to start: the label stays the big thing, and the animal
@@ -383,9 +445,14 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
                   />
                 )}
 
-                {/* A tile showing a picture still says which letter or number it is. */}
-                {(isHero || isFinish) && (
-                  <span aria-hidden="true" className="absolute bottom-0.5 left-1.5 text-xs font-black opacity-70">
+                {/* The animal's tile shows a picture, but still says which letter or number it is. */}
+                {isHero && (
+                  <span
+                    aria-hidden="true"
+                    className={`absolute font-black ${
+                      arabic ? 'bottom-0 left-2 text-xl leading-none' : 'bottom-0.5 left-1.5 text-xs'
+                    }`}
+                  >
                     {cell.label}
                   </span>
                 )}
@@ -398,7 +465,7 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
           {at > 0 && (
             <button
               type="button"
-              onClick={handleReset}
+              onClick={() => once('reset', handleReset)}
               aria-label="Ulangi labirin"
               className="toddler-tap flex size-20 items-center justify-center rounded-3xl bg-white text-slate-600 shadow-lg ring-2 ring-slate-200 outline-none hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-sky-400 active:scale-95"
             >
@@ -409,9 +476,9 @@ export function LabirinScreen({ onHome, letterLang }: LabirinScreenProps) {
           {done && (
             <button
               type="button"
-              onClick={handleNext}
+              onClick={() => once('next', handleNext)}
               aria-label="Labirin berikutnya"
-              className="toddler-tap flex h-20 items-center justify-center gap-3 rounded-3xl bg-emerald-500 px-8 text-2xl font-black text-white shadow-xl outline-none hover:bg-emerald-600 focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95"
+              className="toddler-tap flex h-20 items-center justify-center gap-3 rounded-3xl bg-emerald-600 px-8 text-2xl font-black text-white shadow-xl outline-none hover:bg-emerald-700 focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95"
             >
               <Check className="size-8" strokeWidth={3} />
               Lanjut

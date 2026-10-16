@@ -25,6 +25,11 @@ export function wordPicture(word: string): string | undefined {
   return pictureUrl(`words/${slugify(word)}`);
 }
 
+/** Artwork for an Arabic word card, keyed by its letter's id, e.g. words/ar/alif. */
+export function arabicWordPicture(letterId: string): string | undefined {
+  return pictureUrl(`words/ar/${letterId}`);
+}
+
 /** Artwork for the objects counted in Berhitung, e.g. "apel". */
 export function countingPicture(label: string): string | undefined {
   return pictureUrl(`counting/${slugify(label)}`);

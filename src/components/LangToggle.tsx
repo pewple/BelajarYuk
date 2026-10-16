@@ -24,7 +24,7 @@ const OPTIONS: { id: LetterLang; label: string; sub: string }[] = [
 export function LangToggle({ value, onChange }: LangToggleProps) {
   return (
     <div className="flex flex-col items-center gap-1">
-      <span className="text-xs font-bold tracking-wide text-slate-400 uppercase">Suara huruf</span>
+      <span className="text-xs font-bold tracking-wide text-slate-600 uppercase">Suara huruf</span>
       <div
         role="radiogroup"
         aria-label="Bahasa pengucapan huruf"
@@ -40,10 +40,10 @@ export function LangToggle({ value, onChange }: LangToggleProps) {
               aria-checked={active}
               aria-label={`Ucapkan huruf dalam bahasa ${option.sub}`}
               onClick={() => onChange(option.id)}
-              className={`toddler-tap flex h-12 min-w-20 items-center justify-center rounded-xl px-4 text-lg font-black outline-none focus-visible:ring-4 focus-visible:ring-sky-400 active:scale-95 ${
+              className={`toddler-tap flex h-16 min-w-20 items-center justify-center rounded-xl px-4 text-lg font-black outline-none focus-visible:ring-4 focus-visible:ring-sky-400 active:scale-95 ${
                 active
                   ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-slate-500 hover:bg-slate-100'
+                  : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               {option.label}

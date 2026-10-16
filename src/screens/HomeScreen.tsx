@@ -65,11 +65,11 @@ export function HomeScreen({ onChoose, showVoiceNotice }: HomeScreenProps) {
       </header>
 
       {/*
-        A centred, wrapping row rather than a grid. Five cards never divide
-        evenly into two, three or four columns, and a grid would strand the
-        odd one at the left edge; this centres a short last row instead. Each
-        card is sized from the gap (1rem) so the rows fill exactly:
-        2 across on a phone, 3 on a tablet, all 5 on a wide screen.
+        A centred, wrapping row rather than a grid. A grid would strand an odd
+        card at the left edge whenever the count does not divide evenly into the
+        columns; this centres a short last row instead. Each card is sized from
+        the gap (1rem) so the rows fill exactly:
+        2 across on a phone, 3 on a tablet, all 6 on a wide screen.
       */}
       <nav className="flex w-full max-w-5xl flex-wrap justify-center gap-4">
         {HOME_CHOICES.map((choice) => (
@@ -79,7 +79,7 @@ export function HomeScreen({ onChoose, showVoiceNotice }: HomeScreenProps) {
             onClick={() => onChoose(choice.id)}
             /* min-h tuned so every card fits a phone screen without scrolling -
                a choice a pre-reader cannot see is no choice. */
-            className={`toddler-tap flex min-h-36 w-[calc(50%_-_0.5rem)] flex-col items-center justify-center gap-2 rounded-[2.5rem] bg-gradient-to-br ${choice.theme} px-3 py-6 text-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 sm:min-h-72 sm:w-[calc((100%_-_2rem)/3)] sm:gap-3 sm:py-8 lg:w-[calc((100%_-_4rem)/5)]`}
+            className={`toddler-tap flex min-h-36 w-[calc(50%_-_0.5rem)] flex-col items-center justify-center gap-2 rounded-[2.5rem] bg-gradient-to-br ${choice.theme} px-3 py-6 text-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 sm:min-h-72 sm:w-[calc((100%_-_2rem)/3)] sm:gap-3 sm:py-8 lg:w-[calc((100%_-_5rem)/6)]`}
           >
             <CardArt
               icon={choice.icon}

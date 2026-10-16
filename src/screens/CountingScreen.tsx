@@ -1,14 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Check, RotateCcw } from 'lucide-react';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { Celebration } from '../components/Celebration';
 import { CardArt } from '../components/CardArt';
+import { ScriptToggle } from '../components/ScriptToggle';
 import { COUNTING_SETS, MAX_COUNT } from '../data/curriculum';
+import { formatNumeral } from '../data/scripts';
+import type { Script } from '../data/scripts';
 import { countingPicture } from '../media/pictures';
-import { numberWordId, useAudio } from '../hooks/useAudio';
+import { numberPart } from '../media/scriptVoice';
+import { stepsFor } from '../media/voiceParts';
+import { CHEER_PROSODY, numberWordId, useAudio } from '../hooks/useAudio';
+import { KNOWS_THE_DRILL_AFTER } from '../data/session';
+import { useIdleReminder } from '../hooks/useIdleReminder';
+import { useTapLock } from '../hooks/useTapLock';
+import { useGameFinished, usePlay } from '../state/play';
 
 type CountingScreenProps = {
   onHome: () => void;
+  script: Script;
+  onScriptChange: (next: Script) => void;
 };
 
 /** Tile size shrinks as the set grows, but never below a generous touch target. */
@@ -43,9 +54,16 @@ function rowWidth(total: number): string {
  * exactly the one-to-one correspondence practice that precedes real counting.
  * The final tap is also the cardinal answer, so the total can be announced
  * without an awkward pause.
+ *
+ * The numbers are written and said in the chosen script: 1 2 3 and "satu, dua,
+ * tiga", or ١ ٢ ٣ and "wahid, itsnan, tsalatsah". The spoken instruction and
+ * the praise stay Indonesian either way.
  */
-export function CountingScreen({ onHome }: CountingScreenProps) {
-  const { speakCountPrompt, speakNumber, celebrateCount, playPop, playChime, playTap } = useAudio();
+export function CountingScreen({ onHome, script, onScriptChange }: CountingScreenProps) {
+  const { speakCountPrompt, playVoice, praiseStep, playPop, playChime, playTap } = useAudio();
+  const arabic = script === 'arab';
+  const { gamesDone } = usePlay();
+  const once = useTapLock();
 
   const [round, setRound] = useState(1);
   /** Tap order per object index; -1 means "not tapped yet". */
@@ -59,11 +77,24 @@ export function CountingScreen({ onHome }: CountingScreenProps) {
   const tappedCount = useMemo(() => order.filter((o) => o > 0).length, [order]);
   const isDone = tappedCount === round;
 
-  // Auditory instruction at the top of every count. A pre-reader cannot read
-  // "Ketuk satu per satu", so the app says what to do out loud instead.
+  useGameFinished(isDone);
+
+  // Auditory instruction at the top of a count. A pre-reader cannot read
+  // "Ketuk satu per satu", so the app says what to do out loud instead. After
+  // a few finished rounds the child knows the drill and it is left out - saying
+  // "Ayo hitung!" before every single round would be nagging. Held in a ref so
+  // finishing the third round does not itself trigger the prompt.
+  const knowsTheDrill = useRef(false);
   useEffect(() => {
-    speakCountPrompt();
+    knowsTheDrill.current = gamesDone >= KNOWS_THE_DRILL_AFTER;
+  }, [gamesDone]);
+
+  useEffect(() => {
+    if (!knowsTheDrill.current) speakCountPrompt();
   }, [attempt, round, speakCountPrompt]);
+
+  // A child who goes quiet mid-count hears it once more.
+  useIdleReminder(!isDone, `${round}-${attempt}`, speakCountPrompt);
 
   const startRound = useCallback((n: number) => {
     setRound(n);
@@ -92,12 +123,16 @@ export function CountingScreen({ onHome }: CountingScreenProps) {
         // it is handed over in the same call - two back-to-back `speak`s
         // would have the praise cancel the total mid-word.
         playChime();
-        celebrateCount(position);
+        const total = numberPart(position, script);
+        playVoice([
+          ...stepsFor([{ ...total, text: `${total.text}!` }], CHEER_PROSODY),
+          praiseStep(),
+        ]);
       } else {
-        speakNumber(position);
+        playVoice(stepsFor([numberPart(position, script)]));
       }
     },
-    [celebrateCount, order, playChime, playPop, round, speakNumber, tappedCount],
+    [order, playChime, playPop, playVoice, praiseStep, round, script, tappedCount],
   );
 
   const handleReset = useCallback(() => {
@@ -115,13 +150,17 @@ export function CountingScreen({ onHome }: CountingScreenProps) {
     <ScreenFrame
       title="Berhitung"
       onHome={onHome}
-      caption={`Ketuk satu per satu — ada ${round} ${set.label}`}
+      onRepeat={speakCountPrompt}
+      caption={`Ketuk satu per satu — ada ${formatNumeral(round, script)} ${set.label}`}
     >
       {isDone && (
         <Celebration
           key={`${round}-${tappedCount}`}
-          headline={numberWordId(round).toUpperCase()}
-          subline={`Ada ${round} ${set.label}!`}
+          // The big word on the card is the number itself: spelled out in
+          // Latin ("TIGA"), or as the Arabic numeral (٣) - a name in Arabic
+          // letters would be a lot to ask of a reader who knows only the digit.
+          headline={arabic ? formatNumeral(round, script) : numberWordId(round).toUpperCase()}
+          subline={`Ada ${formatNumeral(round, script)} ${set.label}!`}
         />
       )}
 
@@ -130,13 +169,13 @@ export function CountingScreen({ onHome }: CountingScreenProps) {
       <div
         className={`mb-6 flex size-24 items-center justify-center rounded-3xl text-6xl font-black shadow-lg transition-colors sm:size-28 sm:text-7xl ${
           isDone
-            ? 'bg-emerald-500 text-white'
-            : 'animate-gentle-bob bg-white text-slate-300 ring-2 ring-slate-200'
-        }`}
+            ? 'bg-emerald-600 text-white'
+            : 'animate-gentle-bob bg-white text-slate-500 ring-2 ring-slate-200'
+        } ${arabic ? 'font-arabic' : ''}`}
         aria-live="polite"
         aria-label={isDone ? `Jumlahnya ${round}` : 'Ada berapa?'}
       >
-        {isDone ? round : '?'}
+        {isDone ? formatNumeral(round, script) : '?'}
       </div>
 
       <div
@@ -150,7 +189,7 @@ export function CountingScreen({ onHome }: CountingScreenProps) {
             <button
               key={i}
               type="button"
-              onClick={() => handleTap(i)}
+              onClick={() => once(`object-${i}`, () => handleTap(i))}
               disabled={counted}
               aria-label={counted ? `${set.label} ke-${position}, sudah dihitung` : `Hitung ${set.label}`}
               className={`toddler-tap relative flex ${tileSize(round)} shrink-0 items-center justify-center rounded-[1.75rem] shadow-lg ring-2 ring-slate-200 outline-none focus-visible:ring-4 focus-visible:ring-sky-400 ${
@@ -174,9 +213,11 @@ export function CountingScreen({ onHome }: CountingScreenProps) {
               {counted && (
                 <span
                   aria-hidden="true"
-                  className="animate-pop-in absolute -top-2 -right-2 flex size-9 items-center justify-center rounded-full bg-emerald-500 text-lg font-black text-white shadow-md sm:size-10 sm:text-xl"
+                  className={`animate-pop-in absolute -top-2 -right-2 flex size-9 items-center justify-center rounded-full bg-emerald-700 text-lg font-black text-white shadow-md sm:size-10 sm:text-xl ${
+                    arabic ? 'font-arabic' : ''
+                  }`}
                 >
-                  {position}
+                  {formatNumeral(position, script)}
                 </span>
               )}
             </button>
@@ -187,7 +228,7 @@ export function CountingScreen({ onHome }: CountingScreenProps) {
       <div className="mt-8 flex items-center gap-4">
         <button
           type="button"
-          onClick={handleReset}
+          onClick={() => once('reset', handleReset)}
           aria-label="Ulangi hitungan"
           className="toddler-tap flex size-20 items-center justify-center rounded-3xl bg-white text-slate-600 shadow-lg ring-2 ring-slate-200 outline-none hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-sky-400 active:scale-95"
         >
@@ -196,16 +237,20 @@ export function CountingScreen({ onHome }: CountingScreenProps) {
 
         <button
           type="button"
-          onClick={handleNext}
+          onClick={() => once('next', handleNext)}
           aria-label={round >= MAX_COUNT ? 'Mulai lagi dari satu' : `Lanjut ke angka ${round + 1}`}
           className={`toddler-tap flex h-20 items-center justify-center gap-3 rounded-3xl px-8 text-2xl font-black text-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 ${
-            isDone ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-400 hover:bg-slate-500'
+            isDone ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-500 hover:bg-slate-600'
           }`}
         >
           {isDone ? <Check className="size-8" strokeWidth={3} /> : null}
           Lanjut
           <ArrowRight className="size-8" strokeWidth={3} />
         </button>
+      </div>
+
+      <div className="mt-6">
+        <ScriptToggle value={script} onChange={onScriptChange} />
       </div>
     </ScreenFrame>
   );

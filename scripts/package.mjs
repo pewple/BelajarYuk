@@ -48,8 +48,11 @@ cpSync(dist, out, { recursive: true });
 // Kept as plain lists rather than derived from src/media/slots.ts: the packager
 // is dependency-free Node, and these folders almost never change. The media
 // check page (#media) is what actually verifies coverage.
-const AUDIO_FOLDERS = ['letters/id', 'letters/en', 'words', 'numbers', 'maze', 'money', 'praise', 'phrases', 'ui'];
-const IMAGE_FOLDERS = ['words', 'counting', 'maze', 'shop', 'money', 'home'];
+const AUDIO_FOLDERS = [
+  'letters/id', 'letters/en', 'letters/ar', 'words', 'words/ar', 'numbers', 'numbers/ar', 'maze', 'money', 'colors', 'praise',
+  'phrases', 'ui',
+];
+const IMAGE_FOLDERS = ['words', 'words/ar', 'counting', 'maze', 'shop', 'money', 'home'];
 
 for (const folder of AUDIO_FOLDERS) mkdirSync(join(out, 'media', 'audio', folder), { recursive: true });
 for (const folder of IMAGE_FOLDERS) mkdirSync(join(out, 'media', 'images', folder), { recursive: true });

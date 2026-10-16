@@ -46,10 +46,27 @@ export type SpeakOptions = {
 
 export type SpeakItem = SpeakOptions & { text: string };
 
+/**
+ * What a native speaker would say, for a device that has a voice in that
+ * language. `text` is Arabic script, `lang` e.g. "ar-SA".
+ */
+export type NativeSpeech = { text: string; lang: string };
+
 /** One step in a spoken run: a recording, or something for the engine to say. */
 export type VoiceStep =
   | { kind: 'clip'; url: string }
-  | { kind: 'tts'; text: string; opts?: SpeakOptions };
+  | {
+      kind: 'tts';
+      text: string;
+      opts?: SpeakOptions;
+      /** Used instead of `text` when the device has a voice for `native.lang`. */
+      native?: NativeSpeech;
+      /**
+       * This step was written as one sentence with the one before it. It matters
+       * only if a native voice is missing, when the two are joined back together.
+       */
+      joinPrev?: true;
+    };
 
 /** Slow and slightly bright: easier for a 3-year-old to segment and imitate. */
 const TODDLER_PROSODY: Required<Omit<SpeakOptions, 'lang'>> = {
@@ -183,6 +200,24 @@ export const EN_VOICE_RESPELL: Record<string, string> = {
   salah: 'sah-lah',
   kembali: 'kuhm-bah-lee',
 
+  // Pola: colours and instructions
+  merah: 'meh-rah',
+  biru: 'bee-roo',
+  kuning: 'koo-ning',
+  hijau: 'hee-jow',
+  lanjutkan: 'lahn-joot-kahn',
+  polanya: 'poh-lah-nyah',
+  coba: 'choh-bah',
+  lagi: 'lah-ghee',
+
+  // Instructions and the rest screen
+  ketuk: 'kuh-took',
+  hurufnya: 'hoo-roof-nyah',
+  gambarnya: 'gahm-bar-nyah',
+  sudah: 'soo-dah',
+  dulu: 'doo-loo',
+  jumpa: 'joom-pah',
+
   // The maze
   ikuti: 'ee-koo-tee',
   huruf: 'hoo-roof',
@@ -194,6 +229,76 @@ export const EN_VOICE_RESPELL: Record<string, string> = {
   pilih: 'pee-leeh',
   atau: 'ah-tow',
   acak: 'ah-chahk',
+
+  // Arabic letter names (hijaiyah), as Indonesian children say them. "ha" is
+  // already above: ح and ه share it.
+  alif: 'ah-leef',
+  ba: 'bah',
+  ta: 'tah',
+  tsa: 'tsah',
+  jim: 'jeem',
+  kho: 'kho',
+  dal: 'dahl',
+  dzal: 'zahl',
+  ro: 'roh',
+  zai: 'zy',
+  sin: 'seen',
+  syin: 'sheen',
+  shod: 'shohd',
+  dhod: 'dhohd',
+  tho: 'thoh',
+  zho: 'zhoh',
+  ain: 'ayn',
+  ghoin: 'ghoyn',
+  fa: 'fah',
+  qof: 'qohf',
+  kaf: 'kahf',
+  lam: 'lahm',
+  mim: 'meem',
+  nun: 'noon',
+  wau: 'wow',
+  ya: 'yah',
+
+  // Arabic word cards, as an Indonesian voice would read the spelling
+  arnab: 'ar-nahb',
+  bab: 'bahb',
+  tuffah: 'too-fah',
+  tsalj: 'tsahlj',
+  jubn: 'joobn',
+  halib: 'hah-leeb',
+  khubz: 'khoobz',
+  dubb: 'doob',
+  dzahab: 'zah-hahb',
+  "ra's": 'rahs',
+  zahrah: 'zah-rah',
+  samak: 'sah-mahk',
+  syams: 'shahms',
+  shunduq: 'shoon-dook',
+  "dhau'": 'dhow',
+  "tha'ir": 'thah-eer',
+  zharf: 'zharf',
+  ghabah: 'ghah-bah',
+  fam: 'fahm',
+  qamar: 'qah-mar',
+  kitab: 'kee-tahb',
+  laymun: 'lie-moon',
+  "ma'": 'mah',
+  najm: 'nahjm',
+  hadiyyah: 'hah-dee-yah',
+  ward: 'wahrd',
+  yad: 'yahd',
+
+  // Arabic numbers 1-10
+  wahid: 'wah-heed',
+  itsnan: 'its-nahn',
+  tsalatsah: 'tsah-lah-tsah',
+  "arba'ah": 'ar-bah-ah',
+  khamsah: 'kham-sah',
+  sittah: 'sit-tah',
+  "sab'ah": 'sab-ah',
+  tsamaniyah: 'tsah-mah-nee-yah',
+  "tis'ah": 'tis-ah',
+  asyarah: 'ah-shah-rah',
 
   // Letter names (the Indonesian ones, not the English toggle)
   a: 'ah',
@@ -499,6 +604,40 @@ function playClipStep(url: string): Promise<void> {
   });
 }
 
+function sameProsody(a: SpeakOptions | undefined, b: SpeakOptions | undefined): boolean {
+  return a?.lang === b?.lang && a?.rate === b?.rate && a?.pitch === b?.pitch && a?.volume === b?.volume;
+}
+
+/**
+ * Settles, for this device, which steps are spoken natively and which are not.
+ *
+ * A step with a `native` voice stays its own utterance when the device has
+ * that voice. Without one it falls back to its plain text - and that text is
+ * joined back onto the words around it, so "Ikuti huruf dari alif sampai tsa"
+ * is one smooth sentence again rather than four clipped fragments.
+ */
+export function resolveNativeSteps(
+  steps: VoiceStep[],
+  hasVoice: (lang: string) => boolean,
+): VoiceStep[] {
+  const out: VoiceStep[] = [];
+
+  for (const step of steps) {
+    if (step.kind !== 'tts' || (step.native && hasVoice(step.native.lang))) {
+      out.push(step);
+      continue;
+    }
+
+    const last = out[out.length - 1];
+    if (step.joinPrev && last?.kind === 'tts' && !last.native && sameProsody(last.opts, step.opts)) {
+      out[out.length - 1] = { ...last, text: `${last.text} ${step.text}` };
+    } else {
+      out.push({ kind: 'tts', text: step.text, opts: step.opts });
+    }
+  }
+  return out;
+}
+
 function speakStep(
   synth: SpeechSynthesis,
   item: SpeakItem,
@@ -656,12 +795,23 @@ export function useAudio(): AudioApi {
       void (async () => {
         if (needsSettle) await delay(70);
 
-        for (const step of usable) {
+        const resolved = resolveNativeSteps(usable, (lang) => pickVoice(lang) !== null);
+        for (const step of resolved) {
           if (run !== voiceRun) return; // superseded by a newer run
           if (step.kind === 'clip') {
             await playClipStep(step.url);
           } else if (synth) {
-            await speakStep(synth, { text: step.text, ...step.opts }, pickVoice(step.opts?.lang ?? LANG_TAGS.id));
+            // A real voice for the native language beats the transliteration.
+            const nativeVoice = step.native ? pickVoice(step.native.lang) : null;
+            if (step.native && nativeVoice) {
+              await speakStep(
+                synth,
+                { ...step.opts, text: step.native.text, lang: step.native.lang },
+                nativeVoice,
+              );
+            } else {
+              await speakStep(synth, { text: step.text, ...step.opts }, pickVoice(step.opts?.lang ?? LANG_TAGS.id));
+            }
           }
         }
       })();

@@ -1,9 +1,10 @@
 # Belajar Yuk!
 
 Aplikasi belajar interaktif berbahasa Indonesia untuk balita usia ±3 tahun.
-Lima permainan: **Mengenal Huruf**, **Belajar Bicara**, **Berhitung 1–10**,
-**Labirin** (mengikuti urutan huruf atau angka sampai ke tujuan), dan **Kasir**
-(menghitung uang kembalian selangkah demi selangkah).
+Enam permainan: **Mengenal Huruf**, **Belajar Bicara**, **Berhitung 1–10**,
+**Pola** (melanjutkan barisan bentuk berwarna), **Labirin** (mengikuti urutan huruf
+atau angka sampai ke tujuan), dan **Kasir** (menghitung uang kembalian selangkah demi
+selangkah). Huruf dan angka bisa ditulis Latin atau Arab (hijaiyah).
 
 Tidak butuh file audio — semua suara bawaan dihasilkan saat aplikasi berjalan
 (Web Speech API untuk pengucapan, Web Audio API untuk efek suara). Suara dan
@@ -31,6 +32,58 @@ Bisa dibuka langsung dari disk (`file://`) karena bundelnya berupa skrip biasa,
 bukan `<script type="module">` yang diblokir browser pada `file://`.
 `scripts/package.mjs` menolak membuat paket kalau syarat itu tidak terpenuhi.
 
+## Otomatis tayang di Netlify (dari GitHub)
+
+Repo ini terhubung ke Netlify. Setiap `git push` ke cabang `main` memicu build di
+Netlify sesuai `netlify.toml`:
+
+1. `npm run build:site` = **tes dulu, baru build**. Kalau ada tes yang gagal,
+   build gagal dan **situs yang sedang tayang tidak berubah**.
+2. Hasil `dist/` dipublikasikan. Berkas hasil build (`/assets/*`) di-cache lama;
+   `index.html` dan `media/` selalu dicek ulang, jadi rekaman baru langsung terbaca.
+
+Node 22 dipakai (`.nvmrc` + `NODE_VERSION`), karena Vite 8 butuh Node ≥ 20.19.
+
+**Mengganti suara/gambar tanpa alat pengembang:** taruh berkas di
+`public/media/audio/` atau `public/media/images/`, commit, push. Langkah
+`prebuild` membuat ulang `manifest.js` otomatis — tidak perlu `npm run media`.
+
+## Dipasang sebagai aplikasi (PWA)
+
+Di alamat https (mis. situs Netlify) dan `localhost`, aplikasi bisa **dipasang** dan
+**dibuka tanpa internet**:
+
+- **Android / Chrome / Edge:** menu ⋮ › *Instal aplikasi* (atau *Tambahkan ke layar utama*).
+- **iPhone / iPad (Safari):** tombol Bagikan › *Tambah ke Layar Utama*.
+- **Komputer (Chrome/Edge):** ikon pasang di ujung kanan bilah alamat.
+
+Sesudah itu ia punya ikon sendiri, terbuka layar penuh tanpa bilah browser, dan tetap
+jalan di pesawat atau di mobil tanpa sinyal — asalkan sudah pernah dibuka sekali
+dengan internet.
+
+Cara kerjanya (semua dibuat otomatis saat `npm run build`):
+
+| Berkas | Isi |
+| --- | --- |
+| `public/manifest.webmanifest` | Nama, warna, dan ikon aplikasi |
+| `public/icons/*.png` | Ikon 192, 512, *maskable* 512, dan ikon iOS 180 (digambar oleh `npm run icons`) |
+| `scripts/sw-template.js` | Isi *service worker*; `scripts/make-sw.mjs` mengisinya dan menulis `dist/sw.js` |
+| `src/pwa.ts` | Mendaftarkannya — hanya di build produksi dan hanya lewat http(s) |
+
+- **Aplikasi** (halaman, skrip, ikon) disimpan saat kunjungan pertama dan dibuka dari
+  simpanan itu seketika; pembaruan diambil di belakang layar dan muncul pada kunjungan
+  berikutnya — tidak pernah di tengah permainan anak. Nama versi adalah hash isi berkas,
+  jadi setiap build yang berbeda otomatis menggantikan simpanan lama.
+- **Rekaman dan gambar sendiri** (`media/`) disimpan terpisah, jadi pembaruan aplikasi
+  tidak membuangnya. `media/manifest.js` selalu ditanyakan ke internet lebih dulu supaya
+  rekaman baru langsung muncul; kalau offline dipakai salinan terakhir. Audio dilayani
+  per potongan (Range) karena Safari mewajibkannya.
+- **Versi seret-dan-lepas lewat `file://`** tidak memakai ini (browser tak mengizinkan, dan
+  folder itu sudah ada di perangkat). Kalau folder yang sama diunggah ke hosting https,
+  ia otomatis bisa dipasang.
+- Untuk membatalkan: hapus aplikasi dari layar utama, atau di browser *Site settings ›
+  Clear data*.
+
 ## Menjalankan
 
 ```bash
@@ -43,9 +96,11 @@ Lalu buka <http://localhost:5173>.
 | Perintah | Kegunaan |
 | --- | --- |
 | `npm run dev` | Server pengembangan Vite |
-| `npm run build` | Cek TypeScript + build produksi ke `dist/` |
+| `npm run build` | Cek TypeScript + build produksi ke `dist/` (membuat ulang `manifest.js` lebih dulu) |
+| `npm run build:site` | Tes + build — yang dijalankan Netlify |
 | `npm run preview` | Melihat hasil build produksi |
 | `npm run media` | Membuat ulang `public/media/manifest.js` dari isi `public/media/` |
+| `npm run icons` | Menggambar ulang ikon aplikasi (`public/icons`) |
 | `npm run package` | Build + bungkus jadi `release/Belajar-Yuk/` dan `.zip` |
 | `npm test` | Menjalankan tes Vitest |
 
@@ -60,9 +115,24 @@ src/
   hooks/useAudio.ts        Web Speech (id-ID / en-US) + efek suara Web Audio
   hooks/useArrowKeys.ts    Navigasi papan ketik untuk kartu
   data/curriculum.ts       Huruf A-Z, kartu kata A-Z, set objek berhitung, tema warna
-  data/navigation.ts       Empat pilihan di layar utama
+  data/navigation.ts       Pilihan di layar utama
+  data/pola.ts             Bentuk, tingkat pola, dan cara membuat satu ronde
+  data/arabicWords.ts      Dek kata Arab (28 huruf, satu kata tiap huruf)
+  components/drawnIcons.ts Gambar buatan untuk kata yang tak punya ikon lucide
+  components/PolaToken.tsx Bentuk berwarna (lingkaran merah, kotak biru, ...)
+  media/polaVoice.ts       "Lanjutkan polanya!", nama warna, barisan dibacakan
+  src/pwa.ts               Mendaftarkan service worker
   data/money.ts            Pembeli, pecahan uang, "seribu"/"dua belas ribu", hitung maju
   data/maze.ts             Tingkat labirin, pembuat labirin berbasis rute, aturan ketukan
+  data/scripts.ts          Huruf hijaiyah (28), angka Arab ٠-٩, nama bacanya
+  media/scriptVoice.ts     Nama huruf/angka Arab -> rekaman, suara Arab, atau ejaan Indonesia
+  data/session.ts          Batas 15 menit, 5 permainan, 15 detik diam, ...
+  data/hints.ts            Petunjuk yang memudar (aturan murni)
+  data/review.ts           Tangga ulangan berjarak (Leitner)
+  state/play.tsx           Hitungan permainan per modul -> gerbang tombol rumah
+  components/ParentGate    Soal penjumlahan untuk orang tua
+  components/RestBreak     Layar istirahat setelah 15 menit
+  components/ScriptToggle  Tombol "ABC | ابت"
   media/manifest.ts        Membaca media/manifest.js saat aplikasi berjalan
   media/clips.ts           Rekaman suara sendiri -> menggantikan mesin suara
   media/pictures.ts        Gambar sendiri -> menggantikan ikon lucide
@@ -71,7 +141,7 @@ src/
   media/moneyVoice.ts      Kalimat kasir
   media/mazeVoice.ts       Kalimat labirin
   components/              ScreenFrame, StepButton, PulseRing, LangToggle, CardArt, MoneyPiece, Celebration
-  screens/                 Home, Alphabet, Pronunciation, Counting, Labirin, Kasir, MediaCheck (#media)
+  screens/                 Home, Alphabet, Pronunciation, Counting, Pola, Labirin, Kasir, MediaCheck (#media)
   test/                    Setup jsdom + tes integrasi
 public/media/              Suara dan gambar sendiri (audio/, images/, manifest.js)
 packaging/                 Berkas untuk pengguna akhir: Perbarui-Media.bat/.ps1, BACA-SAYA.txt
@@ -119,7 +189,9 @@ yang sama untuk huruf maupun angka; yang berbeda hanya tulisannya.
 Jalan menuju tujuan dilapisi huruf berurutan
 (A B C ...) atau angka berurutan (1 2 3 ...). Awalnya kotak pertama menampilkan
 hurufnya/angkanya sendiri dan gambar hewan hanya kecil di pojok; kotak itu
-bergoyang pelan sebagai ajakan "mulai dari sini". **Ketuk kotak pertama** untuk
+bergoyang pelan sebagai ajakan "mulai dari sini". Kotak terakhir (tujuan) sama:
+hurufnya/angkanya yang besar, hadiahnya kecil di pojok, sampai hewan tiba di sana.
+**Ketuk kotak pertama** untuk
 memulai: baru saat itu hewan pindah ke tengah dan membesar. Sebelum itu, ketukan di
 kotak lain diabaikan. Di papan ketik, tekan panah apa saja sebagai ketukan pertama.
 Setelahnya, anak mengetuk kotak di sebelah
@@ -129,7 +201,8 @@ selanjutnya — itulah yang dilatih, bukan sekadar mengikuti dinding. Mengetuk
 cabang buntu dijawab dengan bunyi lembut, kotak bergoyang, dan petunjuk lisan
 ("Cari huruf be!") — bukan hukuman — lalu kotak yang benar menyala sebentar.
 Sorotan itu sengaja muncul *setelah* salah ketuk; kalau selalu menyala, tidak ada
-yang perlu dipikirkan. Labirin dibuat dari rute dulu (rute yang berkelok dan tidak
+yang perlu dipikirkan. (Pengecualiannya anak yang baru mulai: untuk mereka sorotan
+menyala terus sampai mereka lancar — lihat "Petunjuk yang memudar" di bawah.) Labirin dibuat dari rute dulu (rute yang berkelok dan tidak
 pernah menempel dengan dirinya sendiri), lalu cabang buntu ditambahkan, sehingga
 papan selalu berupa pohon: hanya ada satu jalan, tanpa putaran. Angka dibatasi
 sampai 10 — angka yang sudah dikenal dari Berhitung.
@@ -159,6 +232,109 @@ tapi tidak pernah buntu. Beberapa harga berakhiran 500 supaya pecahan itu benar-
 terpakai. Warna uang mengikuti uang kertas Rupiah asli. Ini jauh lebih sulit
 daripada tiga permainan lainnya: cocok untuk anak yang sudah bisa berhitung sampai
 10, bukan untuk usia 3 tahun yang baru mulai.
+
+**Tulisan Arab (bisa diganti-ganti).** Tombol **ABC | ابت** di Mengenal Huruf,
+Belajar Bicara, Berhitung, dan Labirin mengganti huruf Latin menjadi 28 huruf hijaiyah (ا ب ت …)
+dan angka Latin menjadi angka Arab-Hindi (١ ٢ ٣ …). Pilihan itu satu untuk semua
+permainan dan diingat di perangkat.
+
+*Suaranya.* Urutan yang dipakai untuk setiap nama huruf/angka: (1) rekaman Anda di
+`letters/ar/alif.mp3`, …, `numbers/ar/1.mp3`, … (daftar di `BACA-SAYA.txt`); (2) **suara
+Arab bawaan perangkat**, yang diminta dengan tulisan Arab (ألف، باء، … واحد، اثنان …)
+supaya dibaca dengan pelafalan Arab asli; (3) bila perangkat tidak punya suara Arab,
+ejaan Indonesia (*alif, ba, ta*; *wahid, itsnan*) lewat suara Indonesia — perkiraan,
+bukan makhraj yang baku. Tulisan Arab tidak pernah dikirim ke suara Indonesia (hasilnya
+diam atau ngawur). Bagian Indonesia di kalimat yang sama ("Ikuti huruf dari … sampai …")
+tetap diucapkan suara Indonesia, jadi satu kalimat bisa dibacakan dua suara.
+
+Memasang suara Arab: Windows › Settings › Time & language › Language & region › Add a
+language › Arabic › Language options › Speech; Android dan iOS umumnya sudah punya
+(Android: paket suara Google, iOS: Maged/Majed); Edge memiliki suara Arab daring.
+Muat ulang halaman setelahnya.
+
+**Belajar Bicara punya dek Arab sendiri**: 28 kartu, satu kata sehari-hari untuk tiap
+huruf hijaiyah (أَرْنَب kelinci, بَاب pintu, تُفَّاح apel …), ditulis dengan harakat dan
+dibacakan dengan suara Arab (atau ejaan Indonesia bila tak ada), lengkap dengan bacaan
+Latin dan artinya untuk orang tua. Katanya diambil dari daftar awal yang Anda berikan;
+bila ada dua kata untuk satu huruf dipilih yang gambarnya mudah dikenali (أَرْنَب, bukan
+أَسَد; لَيْمُون, bukan لَعِب). Gambarnya ikon lucide; empat kata yang tak punya ikon
+(keju, roti, beruang, emas) digambar sendiri di `components/drawnIcons.ts`. Semuanya bisa
+diganti: rekaman di `words/ar/<id huruf>.mp3`, gambar di `words/ar/<id huruf>.png`
+(mis. `words/ar/alif`; daftar lengkap di halaman `#media`).
+
+Kasir sengaja tidak ikut: Rupiah ditulis dengan angka biasa. Di mode Arab, tombol ID/EN
+dimatikan (hanya ada satu cara baca).
+
+**Gerbang orang tua pada tombol rumah.** Di dalam permainan, tombol rumah awalnya
+abu-abu dengan gembok kecil. Mengetuknya memunculkan soal penjumlahan (mis. `7 + 6`)
+dengan papan angka; jawabannya dua angka, jadi menekan asal hampir tak pernah lolos.
+Salah, kosong, atau ketuk "Kembali bermain" = langsung kembali ke permainan, tanpa
+hukuman. Benar = pulang. Setelah **5 permainan selesai di modul itu** tombol berubah
+normal dan tak lagi digembok. Satu "permainan" = satu ronde Berhitung selesai, satu
+labirin selesai, satu pembeli dilayani, atau (di Mengenal Huruf dan Belajar Bicara) satu
+kartu *berbeda* yang didengar. Hitungannya dimulai ulang setiap pindah modul. Soalnya
+sunyi (tidak dibacakan), dan tombol panah/spasi di belakangnya tidak ikut menggerakkan
+permainan.
+
+**Istirahat setelah 15 menit.** Layar bulan yang lembut: "Sudah dulu ya! Sampai jumpa!"
+(diucapkan), satu tombol besar "Selesai" ke menu — tanpa "main lagi", tanpa hitung mundur.
+Hanya waktu saat halaman benar-benar terlihat yang dihitung. Layar ini menunggu jeda
+alami (satu permainan selesai, atau tiba di menu); kalau tidak ada jeda dalam 45 detik,
+muncul juga. Ini *dorongan*, bukan kunci: setelah ditutup, 15 menit berikutnya dimulai.
+
+**Petunjuk yang memudar.** Di Labirin dan Kasir, anak yang baru mulai mendapat petunjuk
+terus-menerus: kotak berikutnya di labirin menyala; di Kasir, uang terbesar yang masih
+muat menyala. Setelah **3 pilihan benar berturut-turut** petunjuk dilepas (di Labirin
+hanya persimpangan sungguhan yang dihitung — yaitu ada jalan buntu di sebelah hewan);
+setelah **2 pilihan salah berturut-turut** petunjuk kembali. Tingkatnya diingat per
+permainan di perangkat ini. Anak yang sudah lancar tetap mendapat sorotan *sesudah*
+salah ketuk, seperti sebelumnya. Berhitung dan dua modul huruf tidak punya jawaban
+"salah", jadi tidak punya petunjuk yang memudar.
+
+**Kunci ketukan ganda.** Satu ketukan balita sering berupa dua sentuhan dengan jeda
+sepersekian detik. Kontrol yang sama diabaikan bila diketuk lagi dalam 0,35 detik —
+tombol "Lanjut" tidak lagi melompati dua ronde, uang yang sama tidak terhitung dua kali,
+panah tidak melewati satu huruf. Kontrol yang *berbeda* tidak saling menahan.
+
+**Perintah lisan, tidak berlebihan.** Setiap modul mengucapkan apa yang harus dilakukan
+saat dibuka ("Ketuk hurufnya!", "Ketuk gambarnya!", "Ayo hitung!", "Pilih huruf, angka,
+atau acak!", dan pembeli di Kasir menyebut harga dan bayarannya). Tombol speaker di
+pojok kanan atas mengulanginya kapan saja. Jika anak diam 15 detik, perintah diulang
+*satu kali* (disentuh lagi = bisa diulang lagi), tidak lebih. Setelah 3 permainan selesai
+di satu kunjungan, kalimat pembuka yang tak membawa informasi baru ("Ayo hitung!",
+"Ayo hitung kembaliannya!") dihilangkan; harga dan bayaran pembeli tetap disebut.
+
+**Ulangan berjarak (disimpan lokal).** Huruf/angka yang membuat anak salah di Labirin,
+dan pembeli yang kembaliannya salah di Kasir, dicatat di tangga Leitner kecil: salah =
+turun ke dasar dan segera muncul lagi; benar = naik satu anak tangga dengan jeda 10 menit
+→ 1 hari → 3 hari → 1 minggu; setelah 3 anak tangga dianggap hafal. Hal yang tak pernah
+salah tidak dicatat sama sekali. Huruf/angka yang jatuh tempo muncul sebagai *jalan buntu*
+di labirin berikutnya (bentuk labirin tidak berubah), dan setiap pembeli ketiga di Kasir
+diganti pembeli yang pernah salah (urutan tetap tidak kacau). Semuanya di `localStorage`
+perangkat ini — tidak ada akun, tidak ada yang dikirim ke mana pun. Hapus data situs
+untuk mengosongkannya.
+
+**Aksesibilitas.** Semua target sentuh ≥ 64 px (termasuk pengalih ABC/ID), kontras
+teks diperiksa ≥ 4,5:1 (3:1 untuk teks besar), `prefers-reduced-motion` dihormati,
+setiap kontrol punya nama untuk pembaca layar, dan dialog (gerbang, istirahat) bersifat
+modal dengan fokus pindah ke dalamnya.
+
+**Pola: melanjutkan barisan.** Satu baris bentuk berulang ("merah, biru, merah, biru") dan
+satu tempat kosong bertanda "?". Anak memilih bentuk berikutnya dari baki yang tidak
+berpindah. Tingkatnya: dua warna berulang (AB), yang digandakan (AAB, ABB), lalu tiga
+warna (ABC), masing-masing dengan beberapa kombinasi warna. Baris selalu menampilkan
+**dua kali ulangan penuh**, sehingga hanya ada satu cara melanjutkannya; titik awal baris
+berubah menurut ronde, jadi jawabannya tidak selalu "yang pertama".
+
+Setiap bentuk punya warna **dan** rupa sendiri — lingkaran merah, kotak biru, segitiga
+kuning, bintang hijau — dengan garis tepi gelap, jadi anak yang sulit membedakan warna
+tetap bisa membedakan bentuk (dan kuning tetap terlihat di atas putih). Salah pilih: bunyi
+lembut, bergoyang, "Coba lagi!", lalu pilihan yang benar menyala sebentar. Benar: seluruh
+baris dibacakan ("merah, biru, merah, biru, merah!") sehingga anak mendengar iramanya,
+bukan satu kata saja. Semua pengaman di atas berlaku di sini juga: gerbang tombol rumah,
+petunjuk yang memudar (3 benar → lepas, 2 salah → kembali), kunci ketukan ganda, perintah
+lisan sekali + ulang, dan ulangan berjarak (tingkat yang salah muncul lagi tiap ronde
+ketiga). Warna bisa direkam di `colors/merah.mp3` dan seterusnya.
 
 **Penguatan positif.** Penyelesaian memicu konfeti, arpeggio nada mayor, angka
 yang berubah dari "?" menjadi jumlahnya, dan pujian singkat yang dirotasi

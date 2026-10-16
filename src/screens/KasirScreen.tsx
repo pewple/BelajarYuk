@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Banknote, Check, RotateCcw } from 'lucide-react';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { Celebration } from '../components/Celebration';
@@ -7,6 +7,7 @@ import { MoneyPiece } from '../components/MoneyPiece';
 import {
   CHANGE_PIECES,
   CHECKOUTS,
+  nextCheckout,
   PIECE_LOOK,
   changeOwed,
   changeSteps,
@@ -15,7 +16,13 @@ import {
   judgeChange,
   rupiahWords,
 } from '../data/money';
+import { KASIR_PREFIX, dueForReview, kasirItemKey, recordResult } from '../data/review';
+import { KNOWS_THE_DRILL_AFTER } from '../data/session';
 import { CHEER_PROSODY, useAudio } from '../hooks/useAudio';
+import { useHints } from '../hooks/useHints';
+import { useIdleReminder } from '../hooks/useIdleReminder';
+import { useTapLock } from '../hooks/useTapLock';
+import { useGameFinished, usePlay } from '../state/play';
 import {
   changeLine,
   paidLine,
@@ -56,14 +63,19 @@ export const WRONG_RESET_MS = 2600;
  */
 export function KasirScreen({ onHome }: KasirScreenProps) {
   const { playVoice, praiseStep, playCoin, playRegister, playNudge, playTap } = useAudio();
+  const { guided, record } = useHints('kasir');
+  const { gamesDone } = usePlay();
+  const once = useTapLock();
 
   const [round, setRound] = useState(0);
+  /** Which customer is at the till, and where the fixed order has got to. */
+  const [customer, setCustomer] = useState({ index: 0, sequential: 0 });
   /** Bumped on a reset, so the same customer is announced again. */
   const [attempt, setAttempt] = useState(0);
   /** The pieces handed back so far, in order. */
   const [pieces, setPieces] = useState<number[]>([]);
 
-  const checkout = CHECKOUTS[round % CHECKOUTS.length];
+  const checkout = CHECKOUTS[customer.index];
   const { price, paid } = checkout;
   const owed = changeOwed(checkout);
 
@@ -73,11 +85,36 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
   const done = verdict === 'exact';
   const over = verdict === 'over';
 
+  useGameFinished(done);
+
+  // Once a few customers have been served the child knows what to do, so the
+  // customer just says what they bought and paid - and "Ayo hitung" goes. Held
+  // in a ref: finishing the third game must not make the app re-announce.
+  const knowsTheDrill = useRef(false);
+  useEffect(() => {
+    knowsTheDrill.current = gamesDone >= KNOWS_THE_DRILL_AFTER;
+  }, [gamesDone]);
+
+  const announce = useCallback(
+    (full: boolean) =>
+      playVoice(stepsFor([...priceLine(price), ...paidLine(paid), ...(full ? promptLine() : [])])),
+    [paid, playVoice, price],
+  );
+
   // The instruction is spoken, not just written: a pre-reader cannot read
   // "Harga Rp 3.000", so the customer announces themselves out loud.
   useEffect(() => {
-    playVoice(stepsFor([...priceLine(price), ...paidLine(paid), ...promptLine()]));
+    announce(!knowsTheDrill.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new customer or a retry, nothing else
   }, [round, attempt, price, paid, playVoice]);
+
+  // A child who goes quiet hears it once more, in full.
+  const repeat = useCallback(() => announce(true), [announce]);
+  useIdleReminder(!done, `${round}-${attempt}`, repeat);
+
+  // While guided, the biggest piece that still fits glows: "this one next".
+  const remaining = owed - given;
+  const hintedPiece = guided && !done && !over ? [...CHANGE_PIECES].reverse().find((p) => p <= remaining) : undefined;
 
   // After a wrong count the sum stays on screen long enough to see, then clears.
   // Derived from `over` rather than separate state, so a manual reset (which
@@ -95,6 +132,12 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
       const total = given + piece;
       const result = judgeChange(total, owed);
       setPieces((prev) => [...prev, piece]);
+
+      // Every piece is a choice: right if it still fits, wrong if it overshot.
+      // The hint level and the review book both learn from it.
+      record(result !== 'over');
+      if (result === 'over') recordResult(kasirItemKey(checkout.item), false);
+      else if (result === 'exact') recordResult(kasirItemKey(checkout.item), true);
 
       if (result === 'over') {
         // Too much. A soft nudge and the words, never a buzzer - being wrong
@@ -114,7 +157,7 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
         playVoice(stepsFor(totalLine(total)));
       }
     },
-    [done, given, over, owed, playCoin, playNudge, playRegister, playVoice, praiseStep],
+    [checkout.item, done, given, over, owed, playCoin, playNudge, playRegister, playVoice, praiseStep, record],
   );
 
   const handleReset = useCallback(() => {
@@ -127,12 +170,14 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
     playTap();
     setPieces([]);
     setRound((r) => r + 1);
-  }, [playTap]);
+    setCustomer((c) => nextCheckout(c.sequential, round + 1, dueForReview(KASIR_PREFIX).map((k) => k.slice(KASIR_PREFIX.length))));
+  }, [playTap, round]);
 
   return (
     <ScreenFrame
       title="Kasir"
       onHome={onHome}
+      onRepeat={repeat}
       caption={done ? 'Kembaliannya sudah benar!' : 'Berikan kembaliannya'}
     >
       {done && (
@@ -157,7 +202,7 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
             />
             <div className="min-w-0">
               <div className="truncate text-sm font-bold text-slate-500">{checkout.item}</div>
-              <div className="text-xs font-bold tracking-wide text-slate-400 uppercase">Harga</div>
+              <div className="text-xs font-bold tracking-wide text-slate-600 uppercase">Harga</div>
               <div className="text-lg font-black whitespace-nowrap text-slate-800 tabular-nums sm:text-2xl">
                 {formatRupiah(price)}
               </div>
@@ -173,7 +218,7 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
             />
             <div className="min-w-0">
               <div className="truncate text-sm font-bold text-slate-500">Pembeli</div>
-              <div className="text-xs font-bold tracking-wide text-slate-400 uppercase">Dibayar</div>
+              <div className="text-xs font-bold tracking-wide text-slate-600 uppercase">Dibayar</div>
               <div className="text-lg font-black whitespace-nowrap text-slate-800 tabular-nums sm:text-2xl">
                 {formatRupiah(paid)}
               </div>
@@ -235,19 +280,19 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
                   <span aria-hidden="true" className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span
                       className={`flex size-7 shrink-0 items-center justify-center rounded-full text-sm text-white ${
-                        tooMuch ? 'bg-rose-500' : 'bg-emerald-500'
+                        tooMuch ? 'bg-rose-600' : 'bg-emerald-700'
                       }`}
                     >
                       {i + 1}
                     </span>
                     <span>{formatNumber(step.from)}</span>
-                    <span className="text-slate-400">+</span>
+                    <span className="text-slate-500">+</span>
                     <span
                       className={`rounded-lg bg-gradient-to-br px-2 py-0.5 text-white ${PIECE_LOOK[step.add].theme}`}
                     >
                       {formatNumber(step.add)}
                     </span>
-                    <span className="text-slate-400">=</span>
+                    <span className="text-slate-500">=</span>
                     <span className={tooMuch ? 'text-rose-600' : 'text-emerald-700'}>{formatNumber(step.total)}</span>
                   </span>
                 </li>
@@ -282,7 +327,13 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
             <p className="text-sm font-bold text-slate-500">Ketuk uang untuk menambah</p>
             <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
               {CHANGE_PIECES.map((piece) => (
-                <MoneyPiece key={piece} amount={piece} disabled={over} onClick={() => handlePiece(piece)} />
+                <MoneyPiece
+                  key={piece}
+                  amount={piece}
+                  disabled={over}
+                  hinted={piece === hintedPiece}
+                  onClick={() => once(`piece-${piece}`, () => handlePiece(piece))}
+                />
               ))}
             </div>
           </section>
@@ -292,7 +343,7 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
           {pieces.length > 0 && (
             <button
               type="button"
-              onClick={handleReset}
+              onClick={() => once('reset', handleReset)}
               aria-label="Ulangi hitungan"
               className="toddler-tap flex size-20 items-center justify-center rounded-3xl bg-white text-slate-600 shadow-lg ring-2 ring-slate-200 outline-none hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-sky-400 active:scale-95"
             >
@@ -303,9 +354,9 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
           {done && (
             <button
               type="button"
-              onClick={handleNext}
+              onClick={() => once('next', handleNext)}
               aria-label="Pembeli berikutnya"
-              className="toddler-tap flex h-20 items-center justify-center gap-3 rounded-3xl bg-emerald-500 px-8 text-2xl font-black text-white shadow-xl outline-none hover:bg-emerald-600 focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95"
+              className="toddler-tap flex h-20 items-center justify-center gap-3 rounded-3xl bg-emerald-600 px-8 text-2xl font-black text-white shadow-xl outline-none hover:bg-emerald-700 focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95"
             >
               <Check className="size-8" strokeWidth={3} />
               Lanjut

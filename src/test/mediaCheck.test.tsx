@@ -27,9 +27,14 @@ describe('the customisable slots', () => {
   });
 
   it('covers every word, count and home card that the app can show', () => {
-    expect(audioIds.filter((id) => id.startsWith('words/'))).toHaveLength(WORD_CARDS.length);
-    expect(audioIds.filter((id) => id.startsWith('numbers/'))).toHaveLength(MAX_COUNT);
-    expect(imageIds.filter((id) => id.startsWith('words/'))).toHaveLength(WORD_CARDS.length);
+    expect(audioIds.filter((id) => /^words\/[^/]+$/.test(id))).toHaveLength(WORD_CARDS.length);
+    expect(audioIds.filter((id) => id.startsWith('words/ar/'))).toHaveLength(28);
+    // Latin and Arabic numbers each have their own ten.
+    expect(audioIds.filter((id) => /^numbers\/\d+$/.test(id))).toHaveLength(MAX_COUNT);
+    expect(audioIds.filter((id) => id.startsWith('numbers/ar/'))).toHaveLength(MAX_COUNT);
+    expect(audioIds.filter((id) => id.startsWith('letters/ar/'))).toHaveLength(28);
+    expect(imageIds.filter((id) => /^words\/[^/]+$/.test(id))).toHaveLength(WORD_CARDS.length);
+    expect(imageIds.filter((id) => id.startsWith('words/ar/'))).toHaveLength(28);
     expect(imageIds.filter((id) => id.startsWith('counting/'))).toHaveLength(COUNTING_SETS.length);
     expect(imageIds.filter((id) => id.startsWith('home/'))).toHaveLength(HOME_CHOICES.length);
   });
@@ -107,7 +112,7 @@ describe('media check page', () => {
     expect(wordsAudio).toHaveTextContent(`2 / ${WORD_CARDS.length}`);
 
     const sentences = screen.getByText('Kalimat').closest('summary')!;
-    expect(sentences).toHaveTextContent('1 / 2');
+    expect(sentences).toHaveTextContent('1 / 7');
 
     const wordsImages = screen.getByText('Kartu kata di Belajar Bicara').closest('summary')!;
     expect(wordsImages).toHaveTextContent(`1 / ${WORD_CARDS.length}`);

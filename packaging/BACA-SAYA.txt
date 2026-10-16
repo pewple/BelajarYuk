@@ -48,12 +48,39 @@ boleh dicicil satu per satu, dalam urutan apa saja.
 
   letters\id\a.mp3 ... z.mp3     Nama huruf, Bahasa Indonesia  (a, be, ce ...)
   letters\en\a.mp3 ... z.mp3     Nama huruf, Bahasa Inggris    (ay, bee, see ...)
+  (Huruf dan angka Arab: kalau perangkat punya suara Arab, aplikasi memakainya
+   untuk membaca nama huruf dan angka dengan pelafalan Arab asli. Kalau tidak,
+   dipakai ejaan Indonesia di bawah ini lewat suara Indonesia. Rekaman Anda
+   selalu didahulukan.)
+  letters\ar\alif.mp3 ...        Nama huruf hijaiyah (28 berkas): alif, ba, ta, tsa,
+                                 jim, ha, kho, dal, dzal, ro, zai, sin, syin, shod,
+                                 dhod, tho, zho, ain, ghoin, fa, qof, kaf, lam, mim,
+                                 nun, ha-2, wau, ya.  ("ha-2" = huruf ه, yang kedua)
+  numbers\ar\1.mp3 ... 10.mp3    Angka dalam bahasa Arab: wahid, itsnan, tsalatsah,
+                                 arba'ah, khamsah, sittah, sab'ah, tsamaniyah,
+                                 tis'ah, asyarah
   words\apel.mp3                 Kata di Belajar Bicara
+  words\ar\alif.mp3 ...          Kata Arab di Belajar Bicara (28 berkas), diberi nama
+                                 menurut hurufnya, sama seperti letters\ar:
+                                 alif = أَرْنَب, ba = بَاب, ta = تُفَّاح, tsa = ثَلْج,
+                                 jim = جُبْن, ha = حَلِيب, kho = خُبْز, dal = دُبّ,
+                                 dzal = ذَهَب, ro = رَأْس, zai = زَهْرَة, sin = سَمَك,
+                                 syin = شَمْس, shod = صُنْدُوق, dhod = ضَوْء, tho = طَائِر,
+                                 zho = ظَرْف, ain = عَيْن, ghoin = غَابَة, fa = فَم,
+                                 qof = قَمَر, kaf = كِتَاب, lam = لَيْمُون, mim = مَاء,
+                                 nun = نَجْم, ha-2 = هَدِيَّة, wau = وَرْد, ya = يَد
+  colors\merah.mp3               Pola: nama warna - merah, biru, kuning, hijau
+  phrases\lanjutkan-pola.mp3     "Lanjutkan polanya!" saat ronde Pola dimulai
+  phrases\coba-lagi.mp3          "Coba lagi!" setelah salah pilih di Pola
   numbers\1.mp3 ... 10.mp3       Angka di Berhitung  (satu ... sepuluh)
   praise\apa-saja.mp3            Pujian. Berapa pun jumlahnya, nama bebas.
                                  Satu dipilih acak setiap kali.
   phrases\greeting.mp3           "Belajar Yuk!" saat layar utama terbuka
   phrases\ayo-hitung.mp3         "Ayo hitung!" saat ronde berhitung dimulai
+  phrases\ketuk-huruf.mp3        "Ketuk hurufnya!" saat Mengenal Huruf dibuka
+  phrases\ketuk-gambar.mp3       "Ketuk gambarnya!" saat Belajar Bicara dibuka
+  phrases\sudah-dulu.mp3         "Sudah dulu ya! Sampai jumpa!" - layar istirahat
+                                 setelah 15 menit bermain
   ui\pop.mp3                     Bunyi saat objek diketuk
   ui\tap.mp3                     Bunyi saat tombol panah ditekan
   ui\chime.mp3                   Bunyi saat satu ronde selesai
@@ -108,6 +135,8 @@ diam. mp3 terputar di semua perangkat.
 --- GAMBAR  (folder media\images) ----------------------------------------
 
   words\apel.png                 Gambar kartu di Belajar Bicara
+  words\ar\alif.png ...          Gambar kartu Arab (28), diberi nama menurut hurufnya
+                                 seperti di atas (mis. words\ar\alif.png = kelinci)
   counting\apel.png              Objek yang diketuk di Berhitung
   home\huruf.png                 Kartu layar utama: huruf, bicara, hitung, kasir
   home\bicara.png

@@ -8,6 +8,8 @@
     "dev": "vite",
     "prebuild": "node scripts/media-manifest.mjs public/media",
     "build": "tsc --noEmit && vite build",
+    "postbuild": "node scripts/make-sw.mjs",
+    "icons": "node scripts/make-icons.mjs",
     "build:site": "npm test && npm run build",
     "preview": "vite preview",
     "media": "node scripts/media-manifest.mjs",

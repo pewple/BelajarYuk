@@ -121,6 +121,21 @@ body {
   .animate-gentle-bob {
     animation: gentle-bob 2.4s ease-in-out infinite;
   }
+  /*
+   * Arabic script. No web font is loaded (the app works offline and sends
+   * nothing to a third party), so this asks for the best Arabic face the
+   * device already has and lets the browser fall back from there.
+   *
+   * The line height is deliberate: Arabic letters carry dots above and below
+   * and tails that drop well past the baseline, and the Latin `leading-none`
+   * used for big letters elsewhere would clip them.
+   */
+  .font-arabic {
+    font-family:
+      'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', 'Geeza Pro', 'Segoe UI', Tahoma, 'Arial',
+      sans-serif;
+    line-height: 1.5;
+  }
   /* Large, forgiving hit areas everywhere. */
   .toddler-tap {
     cursor: pointer;

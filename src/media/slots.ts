@@ -2,6 +2,9 @@ import { ALPHABET, COUNTING_SETS, MAX_COUNT, WORD_CARDS } from '../data/curricul
 import { MAZE_LEVELS } from '../data/maze';
 import { CHECKOUTS, DENOMINATIONS, SPOKEN_AMOUNTS, formatRupiah, rupiahWords } from '../data/money';
 import { HOME_CHOICES } from '../data/navigation';
+import { TOKENS } from '../data/pola';
+import { ARABIC_WORD_CARDS, arabicWordPictureId } from '../data/arabicWords';
+import { ARABIC_NUMBER_NAMES, HIJAIYAH, toArabicNumerals } from '../data/scripts';
 import {
   COUNT_PROMPT_ID,
   GREETING_ID,
@@ -13,6 +16,10 @@ import {
   CLIP_IDS,
   MAZE_CLIP_IDS,
   MONEY_CLIP_IDS,
+  arabicLetterClipId,
+  arabicNumberClipId,
+  arabicWordClipId,
+  colorClipId,
   letterClipId,
   moneyClipId,
   numberClipId,
@@ -74,11 +81,37 @@ export function buildSlots(): SlotCatalogue {
         })),
       },
       {
+        // The 28 hijaiyah. Two are called "ha" (ح and ه), so each slot shows the
+        // letter itself: the glyph is what tells the two files apart.
+        title: 'Nama huruf - Arab (hijaiyah)',
+        slots: HIJAIYAH.map((letter) => ({
+          id: arabicLetterClipId(letter.id),
+          label: `Huruf ${letter.glyph} (${letter.title})`,
+          say: letter.name,
+        })),
+      },
+      {
+        title: 'Angka - Arab',
+        slots: numbers.map((n) => ({
+          id: arabicNumberClipId(n),
+          label: `${toArabicNumerals(n)} (${n})`,
+          say: ARABIC_NUMBER_NAMES[n],
+        })),
+      },
+      {
         title: 'Kata di Belajar Bicara',
         slots: WORD_CARDS.map((card) => ({
           id: wordClipId(card.word),
           label: card.word,
           say: card.word,
+        })),
+      },
+      {
+        title: 'Kata Arab di Belajar Bicara',
+        slots: ARABIC_WORD_CARDS.map((card) => ({
+          id: arabicWordClipId(card.letterId),
+          label: `${card.word} (${card.translit} - ${card.meaning})`,
+          say: card.say,
         })),
       },
       {
@@ -94,7 +127,20 @@ export function buildSlots(): SlotCatalogue {
         slots: [
           { id: CLIP_IDS.greeting, label: 'Sapaan layar utama', say: GREETING_ID },
           { id: CLIP_IDS.countPrompt, label: 'Perintah mulai menghitung', say: COUNT_PROMPT_ID },
+          { id: CLIP_IDS.tapLetter, label: 'Perintah di Mengenal Huruf', say: 'Ketuk hurufnya!' },
+          { id: CLIP_IDS.tapPicture, label: 'Perintah di Belajar Bicara', say: 'Ketuk gambarnya!' },
+          { id: CLIP_IDS.rest, label: 'Waktunya istirahat', say: 'Sudah dulu ya! Sampai jumpa!' },
+          { id: CLIP_IDS.continuePattern, label: 'Perintah di Pola', say: 'Lanjutkan polanya!' },
+          { id: CLIP_IDS.tryAgain, label: 'Salah pilih di Pola', say: 'Coba lagi!' },
         ],
+      },
+      {
+        title: 'Pola - nama warna',
+        slots: Object.values(TOKENS).map((token) => ({
+          id: colorClipId(token.name),
+          label: token.name[0].toUpperCase() + token.name.slice(1),
+          say: token.name,
+        })),
       },
       {
         // The maze's letters and numbers are spoken with the clips above
@@ -153,6 +199,13 @@ export function buildSlots(): SlotCatalogue {
       {
         title: 'Kartu kata di Belajar Bicara',
         slots: WORD_CARDS.map((card) => ({ id: `words/${slugify(card.word)}`, label: card.word })),
+      },
+      {
+        title: 'Kartu kata Arab di Belajar Bicara',
+        slots: ARABIC_WORD_CARDS.map((card) => ({
+          id: arabicWordPictureId(card.letterId),
+          label: `${card.word} (${card.meaning})`,
+        })),
       },
       {
         title: 'Objek di Berhitung',

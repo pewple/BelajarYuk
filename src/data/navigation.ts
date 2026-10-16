@@ -1,4 +1,4 @@
-import { Calculator, Footprints, HandCoins, MessageCircleHeart, Type } from 'lucide-react';
+import { Calculator, Footprints, HandCoins, MessageCircleHeart, Shapes, Type } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { ScreenId } from '../types';
 
@@ -33,6 +33,13 @@ export const HOME_CHOICES: HomeChoice[] = [
     glyph: '1 2 3',
     icon: Calculator,
     theme: 'from-teal-600 to-cyan-700',
+  },
+  {
+    id: 'pola',
+    title: 'Pola',
+    glyph: '● ■ ▲',
+    icon: Shapes,
+    theme: 'from-fuchsia-600 to-pink-700',
   },
   {
     id: 'labirin',

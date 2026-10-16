@@ -63,7 +63,7 @@ function Group({ group, present, kind }: GroupProps) {
                 <div className="font-semibold text-slate-800">{slot.label}</div>
                 <div className="truncate font-mono text-xs text-slate-500">{slot.id}</div>
                 {slot.say && !url && (
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xs text-slate-500">
                     Ucapkan: <span className="font-semibold">{slot.say}</span>
                   </div>
                 )}
