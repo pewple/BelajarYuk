@@ -6,7 +6,9 @@
   "description": "Aplikasi belajar interaktif Bahasa Indonesia untuk balita usia 3 tahun",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/media-manifest.mjs public/media",
     "build": "tsc --noEmit && vite build",
+    "build:site": "npm test && npm run build",
     "preview": "vite preview",
     "media": "node scripts/media-manifest.mjs",
     "package": "npm run build && node scripts/package.mjs",
