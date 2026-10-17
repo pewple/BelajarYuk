@@ -7,7 +7,7 @@ import {
   formatNumeral,
   toArabicNumerals,
 } from '../data/scripts';
-import { EN_VOICE_RESPELL, respellForEnglishVoice } from '../hooks/useAudio';
+import { EN_VOICE_RESPELL, respellForEnglishVoice } from '../audio/respell';
 import { arabicLetterClipId, arabicNumberClipId } from '../media/clips';
 import { arabicLetterPart, numberPart } from '../media/scriptVoice';
 import { setMediaManifest } from './setup';

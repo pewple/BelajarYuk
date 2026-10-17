@@ -59,6 +59,9 @@ export const CLIP_IDS = {
   // "That is enough for now" - the rest screen after a quarter hour.
   rest: 'phrases/sudah-dulu',
   // Pola: the instruction, and the nudge after a wrong pick.
+  // Memori and Menulis: the instruction that opens a round.
+  findSame: 'phrases/cari-yang-sama',
+  followLine: 'phrases/ikuti-garis',
   continuePattern: 'phrases/lanjutkan-pola',
   tryAgain: 'phrases/coba-lagi',
   pop: 'ui/pop',
@@ -105,6 +108,12 @@ export function moneyClipId(amount: number): string {
 export function letterClipId(letter: string, lang: string): string {
   return `letters/${lang}/${slugify(letter)}`;
 }
+
+/** The two words that name Pola's kinds, said when choosing between them. */
+export const POLA_CLIP_IDS = {
+  line: 'pola/baris',
+  box: 'pola/kotak',
+} as const;
 
 /** A colour's name in Pola, e.g. "colors/merah". */
 export function colorClipId(name: string): string {

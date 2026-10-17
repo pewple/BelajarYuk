@@ -1,7 +1,7 @@
 import { ARABIC_NUMBER_NAMES, ARABIC_NUMBER_WORDS } from '../data/scripts';
 import type { ArabicWordCard } from '../data/arabicWords';
 import type { ArabicLetter, Script } from '../data/scripts';
-import { numberWordId } from '../hooks/useAudio';
+import { numberWordId } from '../audio/words';
 import { arabicLetterClipId, arabicNumberClipId, arabicWordClipId, numberClipId } from './clips';
 import type { Part } from './voiceParts';
 

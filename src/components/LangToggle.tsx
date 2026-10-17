@@ -1,4 +1,4 @@
-import type { LetterLang } from '../hooks/useAudio';
+import type { LetterLang } from '../audio/words';
 
 type LangToggleProps = {
   value: LetterLang;

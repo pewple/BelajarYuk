@@ -4,14 +4,19 @@ import {
   CHECKOUTS,
   DENOMINATIONS,
   MAX_AMOUNT,
+  PIECE_LIMITS,
   PIECE_LOOK,
   SPOKEN_AMOUNTS,
   changeOwed,
+  canFinish,
   changeSteps,
   formatNumber,
   formatRupiah,
   judgeChange,
+  nextPieceHint,
   rupiahWords,
+  usesLeft,
+  usesOf,
 } from '../data/money';
 
 describe('rupiahWords', () => {
@@ -218,5 +223,62 @@ describe('the spoken amounts', () => {
     expect(SPOKEN_AMOUNTS[0]).toBe(500);
     expect(SPOKEN_AMOUNTS[SPOKEN_AMOUNTS.length - 1]).toBe(MAX_AMOUNT);
     SPOKEN_AMOUNTS.forEach((amount, i) => expect(amount).toBe((i + 1) * 500));
+  });
+});
+
+describe('the limits on each piece', () => {
+  it('give every piece a limit, and keep Rp 500 to one to three uses', () => {
+    for (const piece of CHANGE_PIECES) {
+      expect(PIECE_LIMITS[piece], String(piece)).toBeGreaterThanOrEqual(1);
+      expect(PIECE_LIMITS[piece], String(piece)).toBeLessThanOrEqual(4);
+    }
+    expect(PIECE_LIMITS[500]).toBeGreaterThanOrEqual(1);
+    expect(PIECE_LIMITS[500]).toBeLessThanOrEqual(3);
+  });
+
+  it('are on exactly the pieces in the tray', () => {
+    expect(Object.keys(PIECE_LIMITS).map(Number).sort((a, b) => a - b)).toEqual([...CHANGE_PIECES]);
+  });
+
+  it('count what has been used, and what is left', () => {
+    expect(usesOf([500, 1000, 500])).toEqual({ 500: 2, 1000: 1 });
+    expect(usesLeft([], 500)).toBe(PIECE_LIMITS[500]);
+    expect(usesLeft([500, 500], 500)).toBe(PIECE_LIMITS[500] - 2);
+    expect(usesLeft([500, 500, 500, 500, 500], 500)).toBe(0); // never below nothing
+    expect(usesLeft([], 7)).toBe(0); // not a piece at all
+  });
+
+  it('leave every customer a way to exactly the right change', () => {
+    for (const checkout of CHECKOUTS) expect(canFinish(changeOwed(checkout), []), checkout.item).toBe(true);
+  });
+
+  it('say whether the right change can still be made after some pieces', () => {
+    expect(canFinish(1500, [500])).toBe(true); // 1.000 to go
+    expect(canFinish(1500, [1000])).toBe(true); // 500 to go
+    expect(canFinish(3000, [500, 500, 500])).toBe(false); // 1.500 to go, and no Rp 500 left
+    expect(canFinish(1000, [2000])).toBe(false); // already too much
+    expect(canFinish(1000, [500, 500])).toBe(true); // already exact
+  });
+
+  it('count exact as finishable, and too much as not', () => {
+    expect(canFinish(500, [500])).toBe(true);
+    expect(canFinish(500, [1000])).toBe(false);
+  });
+
+  it('use the limits of every piece, not only Rp 500', () => {
+    expect(canFinish(8000, [5000, 5000])).toBe(false);
+    expect(canFinish(8000, [5000])).toBe(true);
+  });
+
+  it('point the hint at the largest piece that still leads somewhere', () => {
+    expect(nextPieceHint(3500, [])).toBe(2000);
+    expect(nextPieceHint(3500, [2000])).toBe(1000);
+    expect(nextPieceHint(3500, [2000, 1000])).toBe(500);
+    expect(nextPieceHint(8000, [])).toBe(5000);
+  });
+
+  it('never point at a piece that has been used up, or at nothing when the count is lost', () => {
+    expect(nextPieceHint(1500, [500, 500, 500])).toBeUndefined();
+    expect(nextPieceHint(3000, [500, 500, 500])).toBeUndefined();
   });
 });

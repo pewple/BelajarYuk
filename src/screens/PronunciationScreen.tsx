@@ -12,9 +12,9 @@ import type { Script } from '../data/scripts';
 import { arabicWordPicture, wordPicture } from '../media/pictures';
 import { useAudio } from '../hooks/useAudio';
 import { useArrowKeys } from '../hooks/useArrowKeys';
-import { useIdleReminder } from '../hooks/useIdleReminder';
+import { useInstruction } from '../hooks/useInstruction';
 import { useTapLock } from '../hooks/useTapLock';
-import type { LetterLang } from '../hooks/useAudio';
+import type { LetterLang } from '../audio/words';
 import { CLIP_IDS } from '../media/clips';
 import { arabicLetterPart, arabicWordPart } from '../media/scriptVoice';
 import { stepsFor } from '../media/voiceParts';
@@ -82,15 +82,13 @@ export function PronunciationScreen({ onHome, letterLang, script, onScriptChange
     reportGame(cardId);
   }, [arabic, card.letter, cardId, hijaiyah, letterLang, playVoice, reportGame, speakLetter]);
 
-  // Said once on arriving, and once more if the child goes quiet.
   const instruct = useCallback(
     () => playVoice(stepsFor([{ clip: CLIP_IDS.tapPicture, text: 'Ketuk gambarnya!' }])),
     [playVoice],
   );
-  useEffect(() => {
-    instruct();
-  }, [instruct]);
-  useIdleReminder(true, `${script}:${index}`, instruct);
+  // Once on arriving - not again for every card - and once more if the child
+  // goes quiet, which starts its wait again with each new card.
+  useInstruction(instruct, 'arriving', { idleKey: `${script}:${index}` });
 
   const step = useCallback(
     (delta: number) => {

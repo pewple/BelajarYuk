@@ -22,8 +22,8 @@ import {
   recordResult,
 } from '../data/review';
 import { CHECKOUTS, REVIEW_EVERY, nextCheckout } from '../data/money';
-import { resolveNativeSteps } from '../hooks/useAudio';
-import type { VoiceStep } from '../hooks/useAudio';
+import { resolveNativeSteps } from '../audio/voice';
+import type { VoiceStep } from '../audio/voice';
 import { stepsFor } from '../media/voiceParts';
 
 /** Applies a run of right (true) and wrong (false) choices. */

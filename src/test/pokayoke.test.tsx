@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { setupUser } from './user';
 import App from '../App';
 import { HOME_BUTTON, answerGate, gateSum, leaveGame } from './helpers';
 import { MAZE_LEVELS, areNeighbours, buildMaze, cellAt, isFork } from '../data/maze';
@@ -75,7 +76,7 @@ beforeEach(() => installVoice('Test Indonesian', 'id-ID'));
 
 describe('the home button in a game', () => {
   it('starts greyed out, with a lock, and is still in its usual place', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Berhitung/);
 
     expect(home()).toHaveAttribute('data-locked', 'true');
@@ -84,7 +85,7 @@ describe('the home button in a game', () => {
   });
 
   it('asks a grown-up sum when tapped, instead of leaving', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Berhitung/);
     await user.click(home());
 
@@ -95,7 +96,7 @@ describe('the home button in a game', () => {
   });
 
   it('goes home on the right answer', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Berhitung/);
     await user.click(home());
     const { a, b } = gateSum();
@@ -106,7 +107,7 @@ describe('the home button in a game', () => {
   });
 
   it('returns to the game on a wrong answer, with no second try on that sum', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Berhitung/);
     await user.click(home());
     const { a, b } = gateSum();
@@ -117,7 +118,7 @@ describe('the home button in a game', () => {
   });
 
   it('returns to the game on an empty answer', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Berhitung/);
     await user.click(home());
     await user.click(within(gate()!).getByRole('button', { name: 'Periksa jawaban' }));
@@ -127,7 +128,7 @@ describe('the home button in a game', () => {
   });
 
   it('returns to the game from "Kembali bermain" and from Escape', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Berhitung/);
 
     await user.click(home());
@@ -141,7 +142,7 @@ describe('the home button in a game', () => {
   });
 
   it('takes two digits at most, and can delete', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Berhitung/);
     await user.click(home());
 
@@ -153,7 +154,7 @@ describe('the home button in a game', () => {
   });
 
   it('is not steered by the arrow keys behind the dialog', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Mengenal Huruf/);
     await user.click(home());
 
@@ -166,7 +167,7 @@ describe('the home button in a game', () => {
   });
 
   it(`opens up after ${UNLOCK_AFTER_GAMES} finished games, and not before`, async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Berhitung/);
 
     await finishRounds(user, UNLOCK_AFTER_GAMES - 1);
@@ -182,7 +183,7 @@ describe('the home button in a game', () => {
   });
 
   it('counts each module afresh', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Berhitung/);
     await finishRounds(user, UNLOCK_AFTER_GAMES);
     expect(home()).not.toHaveAttribute('data-locked');
@@ -193,7 +194,7 @@ describe('the home button in a game', () => {
   });
 
   it('counts a card only once however often it is tapped, in the letter modules', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Mengenal Huruf/);
 
     for (let i = 0; i < 8; i += 1) await user.click(screen.getByRole('button', { name: 'Dengarkan huruf A' }));
@@ -201,7 +202,7 @@ describe('the home button in a game', () => {
   });
 
   it('opens up once enough different letters have been heard', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Mengenal Huruf/);
 
     for (let i = 0; i < UNLOCK_AFTER_GAMES; i += 1) {
@@ -212,7 +213,7 @@ describe('the home button in a game', () => {
   });
 
   it('opens up in Belajar Bicara by hearing different words', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Belajar Bicara/);
 
     for (let i = 0; i < UNLOCK_AFTER_GAMES; i += 1) {
@@ -223,7 +224,7 @@ describe('the home button in a game', () => {
   });
 
   it('opens up in Labirin by finishing mazes', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Labirin/);
     await user.click(screen.getByRole('button', { name: 'Huruf' }));
     expect(home()).toHaveAttribute('data-locked', 'true');
@@ -238,7 +239,7 @@ describe('the home button in a game', () => {
   });
 
   it('opens up in Kasir by serving customers', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Kasir/);
     expect(home()).toHaveAttribute('data-locked', 'true');
 
@@ -258,7 +259,7 @@ describe('the home button in a game', () => {
 
   it('is not gated on the parent media page', async () => {
     window.location.hash = '#media';
-    const user = userEvent.setup();
+    const user = setupUser();
     render(<App />);
     await user.click(screen.getByRole('button', HOME_BUTTON));
 
@@ -349,13 +350,120 @@ describe('the rest after fifteen minutes', () => {
     expect(rest()).not.toBeInTheDocument();
   });
 
-  it('is not steered by the arrow keys behind it', async () => {
-    render(<App />);
-    click(/Mengenal Huruf/);
-    await pass(SESSION_LIMIT_MS + REST_GRACE_MS + 2000);
+  describe('carrying on', () => {
+    async function resting(screenCard: RegExp = /Mengenal Huruf/) {
+      render(<App />);
+      click(screenCard);
+      await pass(SESSION_LIMIT_MS + REST_GRACE_MS + 2000);
+      expect(rest()).toBeInTheDocument();
+    }
 
-    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
-    expect(screen.getByText(/Huruf 1 dari 26/)).toBeInTheDocument();
+    it('lets a tap anywhere but the home button put it away and play on', async () => {
+      await resting(/Berhitung/);
+      fireEvent.click(rest()!); // the backdrop itself
+
+      expect(rest()).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Berhitung' })).toBeInTheDocument(); // still in the game
+    });
+
+    it('lets a tap on the moon or the words do the same', async () => {
+      await resting(/Berhitung/);
+      fireEvent.click(screen.getByRole('heading', { name: 'Sudah dulu ya!' }));
+
+      expect(rest()).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Berhitung' })).toBeInTheDocument();
+    });
+
+    it('keeps the game exactly where it was', async () => {
+      render(<App />);
+      click(/Berhitung/);
+      click(/^Hitung /); // round 1 done: one game, and a pause
+      click(/^Lanjut/); // round 2: two objects
+      await pass(SESSION_LIMIT_MS + REST_GRACE_MS + 2000);
+      fireEvent.click(rest()!);
+
+      expect(screen.getByText(/Ketuk satu per satu — ada 2 /)).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /^Hitung / })).toHaveLength(2);
+    });
+
+    it('lets any key do the same, without that key also steering the game', async () => {
+      await resting();
+      fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+
+      expect(rest()).not.toBeInTheDocument();
+      expect(screen.getByText(/Huruf 1 dari 26/)).toBeInTheDocument(); // the arrow only put the screen away
+    });
+
+    it.each(['a', 'Enter', ' ', 'Escape'])('and so does the "%s" key', async (key) => {
+      await resting();
+      fireEvent.keyDown(document.body, { key });
+
+      expect(rest()).not.toBeInTheDocument();
+    });
+
+    it('is not put away by keys that only move focus or hold another key', async () => {
+      await resting();
+      for (const key of ['Tab', 'Shift', 'Control', 'Alt', 'Meta']) fireEvent.keyDown(document.body, { key });
+
+      expect(rest()).toBeInTheDocument();
+    });
+
+    it('is not put away by Enter or space on the home button - that is the home button', async () => {
+      await resting();
+      const home = screen.getByRole('button', { name: 'Selesai, kembali ke menu' });
+      fireEvent.keyDown(home, { key: 'Enter' });
+      fireEvent.keyDown(home, { key: ' ' });
+
+      expect(rest()).toBeInTheDocument();
+    });
+
+    it('sends the child home from the home button, and only from it', async () => {
+      await resting(/Berhitung/);
+      fireEvent.click(screen.getByRole('button', { name: 'Selesai, kembali ke menu' }));
+
+      expect(rest()).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Belajar Yuk!' })).toBeInTheDocument();
+    });
+
+    it('stops the spoken goodbye when play goes on', async () => {
+      await resting();
+      const stop = vi.spyOn(window.speechSynthesis, 'cancel');
+      fireEvent.click(rest()!);
+
+      expect(stop).toHaveBeenCalled();
+    });
+
+    it('starts a fresh quarter hour, so it comes back after another', async () => {
+      await resting();
+      fireEvent.click(rest()!);
+      expect(rest()).not.toBeInTheDocument();
+
+      await pass(SESSION_LIMIT_MS - 5000);
+      expect(rest()).not.toBeInTheDocument();
+      await pass(REST_GRACE_MS + 10000);
+      expect(rest()).toBeInTheDocument();
+    });
+
+    it('can be carried on from again and again', async () => {
+      await resting();
+      for (let n = 0; n < 3; n += 1) {
+        fireEvent.click(rest()!);
+        await pass(SESSION_LIMIT_MS + REST_GRACE_MS + 2000);
+        expect(rest(), `time ${n + 2}`).toBeInTheDocument();
+      }
+    });
+
+    it('says plainly that a tap anywhere carries on', async () => {
+      await resting();
+
+      expect(rest()).toHaveTextContent('Ketuk di mana saja untuk terus bermain.');
+    });
+
+    it('has the home button as its only button', async () => {
+      await resting();
+
+      expect(within(rest()!).getAllByRole('button')).toHaveLength(1);
+    });
   });
 });
 
@@ -387,14 +495,14 @@ async function walkRoute(user: User, maze: Maze, from: number, to: number) {
 describe('fading hints in Labirin', () => {
   it('start guided for a new child: the way on glows without a wrong tap', async () => {
     window.localStorage.removeItem(HINTS_STORAGE_KEY); // a child nobody has seen before
-    const user = userEvent.setup();
+    const user = setupUser();
     const maze = await startLetterMaze(user);
 
     expect(tile('letters', labelAt(maze, maze.route[1]))).toHaveAttribute('data-hint', 'true');
   });
 
   it('are off for a child who has graduated, until they go wrong', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const maze = await startLetterMaze(user);
 
     expect(tile('letters', labelAt(maze, maze.route[1]))).not.toHaveAttribute('data-hint');
@@ -402,7 +510,7 @@ describe('fading hints in Labirin', () => {
 
   it('count only real choices - a dead end beside the animal - towards fading', async () => {
     setHints('labirin', 'guided', 0);
-    const user = userEvent.setup();
+    const user = setupUser();
     const { maze } = levelZero();
     await startLetterMaze(user);
     await walkRoute(user, maze, 0, maze.route.length - 1);
@@ -413,7 +521,7 @@ describe('fading hints in Labirin', () => {
 
   it('fade away after three right choices in a row', async () => {
     setHints('labirin', 'guided', 2);
-    const user = userEvent.setup();
+    const user = setupUser();
     const { maze, fork } = levelZero();
     await startLetterMaze(user);
     await walkRoute(user, maze, 0, fork + 1);
@@ -427,7 +535,7 @@ describe('fading hints in Labirin', () => {
 
   it('are remembered for the next visit', async () => {
     setHints('labirin', 'guided', 2);
-    const user = userEvent.setup();
+    const user = setupUser();
     const { maze, fork } = levelZero();
     await startLetterMaze(user);
     await walkRoute(user, maze, 0, fork + 1);
@@ -439,7 +547,7 @@ describe('fading hints in Labirin', () => {
 
   it('come back after two wrong choices in a row', async () => {
     setHints('labirin', 'independent', 1);
-    const user = userEvent.setup();
+    const user = setupUser();
     const { maze, fork } = levelZero();
     await startLetterMaze(user);
     await walkRoute(user, maze, 0, fork);
@@ -454,7 +562,7 @@ describe('fading hints in Labirin', () => {
 
   it('then stay lit: the way on glows as soon as the animal moves', async () => {
     setHints('labirin', 'independent', 1);
-    const user = userEvent.setup();
+    const user = setupUser();
     const { maze, fork } = levelZero();
     await startLetterMaze(user);
     await walkRoute(user, maze, 0, fork);
@@ -470,7 +578,7 @@ describe('fading hints in Labirin', () => {
 
   it('a right choice clears a wrong streak without changing level', async () => {
     setHints('labirin', 'independent', 1);
-    const user = userEvent.setup();
+    const user = setupUser();
     const { maze, fork } = levelZero();
     await startLetterMaze(user);
     await walkRoute(user, maze, 0, fork + 1);
@@ -484,7 +592,7 @@ describe('fading hints in Kasir', () => {
 
   it('start guided: the biggest piece that still fits glows', async () => {
     setHints('kasir', 'guided', 0);
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Kasir/);
 
     // The first customer is owed Rp 500, so Rp 500 is the one.
@@ -494,7 +602,7 @@ describe('fading hints in Kasir', () => {
 
   it('moves along with the sum, and fades after three right pieces in a row', async () => {
     setHints('kasir', 'guided', 0);
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Kasir/);
 
     await user.click(piece('500')); // right: 1 of 3. Customer done.
@@ -511,7 +619,7 @@ describe('fading hints in Kasir', () => {
   });
 
   it('is off for a child who has graduated', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Kasir/);
 
     for (const amount of ['500', '1.000', '2.000', '5.000']) expect(piece(amount)).not.toHaveAttribute('data-hint');
@@ -519,7 +627,7 @@ describe('fading hints in Kasir', () => {
 
   it('comes back after two overshoots in a row, once the count is cleared', async () => {
     setHints('kasir', 'independent', 0);
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Kasir/);
 
     await user.click(piece('2.000')); // too much
@@ -619,7 +727,7 @@ describe('the tap lock', () => {
 
 describe('spoken instructions', () => {
   it('Mengenal Huruf and Belajar Bicara say what to do on arriving', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Mengenal Huruf/);
     expect(spokenTexts).toContain('Ketuk hurufnya!');
 
@@ -630,7 +738,7 @@ describe('spoken instructions', () => {
   });
 
   it('says it once on arriving, not again for every card', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Mengenal Huruf/);
     spokenTexts.length = 0;
 
@@ -647,7 +755,7 @@ describe('spoken instructions', () => {
     [/Labirin/, 'Pilih huruf, angka, atau acak!'],
     [/Kasir/, 'Harganya seribu lima ratus rupiah. Dibayar dua ribu rupiah. Ayo hitung kembaliannya!'],
   ])('%s has a speaker button that says its instruction again', async (card, line) => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, card);
     spokenTexts.length = 0;
 
@@ -662,7 +770,7 @@ describe('spoken instructions', () => {
   });
 
   it('Berhitung leaves "Ayo hitung!" out once the child knows the drill', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Berhitung/);
     expect(spokenTexts).toContain('Ayo hitung!');
 
@@ -674,7 +782,7 @@ describe('spoken instructions', () => {
   });
 
   it('Kasir keeps the price and payment but drops "Ayo hitung" after a few customers', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Kasir/);
 
     for (let n = 0; n < 3; n += 1) {
@@ -760,7 +868,7 @@ describe('the reminder when a child goes quiet', () => {
 
 describe('spaced review in Labirin', () => {
   it('files a wrong tap under the letter that was being looked for', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const { maze, fork } = levelZero();
     await startLetterMaze(user);
     await walkRoute(user, maze, 0, fork);
@@ -773,7 +881,7 @@ describe('spaced review in Labirin', () => {
   });
 
   it('moves it up a rung when it is later got right', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const { maze, fork } = levelZero();
     window.localStorage.setItem(
       REVIEW_STORAGE_KEY,
@@ -786,7 +894,7 @@ describe('spaced review in Labirin', () => {
   });
 
   it('does not record anything for a child who has never got it wrong', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const { maze } = levelZero();
     await startLetterMaze(user);
     await walkRoute(user, maze, 0, maze.route.length - 1);
@@ -799,7 +907,7 @@ describe('spaced review in Labirin', () => {
       REVIEW_STORAGE_KEY,
       JSON.stringify({ 'maze:letters:latin:9': { box: 0, due: 0, misses: 1 } }),
     );
-    const user = userEvent.setup();
+    const user = setupUser();
     await startLetterMaze(user);
 
     // Level 0 has a single dead end, so it must be the letter that was missed: I.
@@ -811,7 +919,7 @@ describe('spaced review in Labirin', () => {
       REVIEW_STORAGE_KEY,
       JSON.stringify({ 'maze:letters:latin:9': { box: 1, due: Date.now() + 60_000, misses: 1 } }),
     );
-    const user = userEvent.setup();
+    const user = setupUser();
     await startLetterMaze(user);
 
     expect(screen.queryByRole('button', { name: 'Huruf I' })).not.toBeInTheDocument();
@@ -826,7 +934,7 @@ describe('spaced review in Labirin', () => {
   });
 
   it('does not reshuffle the board under the child while the book changes', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const { maze, fork } = levelZero();
     await startLetterMaze(user);
     const labels = () =>
@@ -847,7 +955,7 @@ describe('spaced review in Kasir', () => {
   const give = (user: User, rupiah: string) => user.click(screen.getByRole('button', { name: `Tambah Rp ${rupiah}` }));
 
   it('files an overshoot under the customer, and the right answer moves it up', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Kasir/);
 
     await give(user, '2.000'); // too much for Permen
@@ -863,7 +971,7 @@ describe('spaced review in Kasir', () => {
       REVIEW_STORAGE_KEY,
       JSON.stringify({ 'kasir:Roti': { box: 0, due: 0, misses: 1 } }),
     );
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Kasir/);
 
     const serve = async (n: number) => {
@@ -889,7 +997,7 @@ describe('spaced review in Kasir', () => {
   });
 
   it('follows the fixed order when nothing is due', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await open(user, /Kasir/);
 
     for (let n = 0; n < 4; n += 1) {
@@ -918,7 +1026,7 @@ describe('storage that cannot be used', () => {
       throw new Error('blocked');
     };
     try {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { maze, fork } = levelZero();
       await startLetterMaze(user);
       await walkRoute(user, maze, 0, fork);

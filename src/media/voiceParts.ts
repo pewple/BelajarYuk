@@ -1,5 +1,5 @@
 import { clipUrl } from './clips';
-import type { SpeakOptions, VoiceStep } from '../hooks/useAudio';
+import type { SpeakOptions, VoiceStep } from '../audio/voice';
 
 /**
  * Spoken sentences built from small, separately recordable parts.
@@ -9,7 +9,7 @@ import type { SpeakOptions, VoiceStep } from '../hooks/useAudio';
  * fixed words and the numbers and letters that already have clips. So each part
  * can be a recording of its own, and a missing one falls back to speech.
  */
-import type { NativeSpeech } from '../hooks/useAudio';
+import type { NativeSpeech } from '../audio/voice';
 
 export type Part = {
   /** Clip id to look for in media/audio. */

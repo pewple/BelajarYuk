@@ -1,10 +1,14 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { setupUser } from './user';
 import App from '../App';
 import { leaveGame } from './helpers';
-import { CHANGE_PIECES, CHECKOUTS, changeOwed, formatRupiah } from '../data/money';
-import { PRAISE_ID, respellForEnglishVoice } from '../hooks/useAudio';
+import { CHANGE_PIECES, CHECKOUTS, PIECE_LIMITS, changeOwed, formatRupiah } from '../data/money';
+import { HINTS_STORAGE_KEY } from '../data/hints';
+import { WRONG_RESET_MS } from '../screens/KasirScreen';
+import { PRAISE_ID } from '../audio/words';
+import { respellForEnglishVoice } from '../audio/respell';
 import { changeLine, paidLine, priceLine, promptLine, stepsFor, totalLine, wrongLine } from '../media/moneyVoice';
 import {
   installVoice,
@@ -69,18 +73,19 @@ describe('Kasir', () => {
   // Indonesian voice present and the words spoken as written. The fallback for
   // a device without one is covered further down.
   beforeEach(() => installVoice('Test Indonesian', 'id-ID'));
+  afterEach(() => vi.useRealTimers());
 
   describe('opening it', () => {
     it('is the last card on the home screen', () => {
       render(<App />);
 
       const cards = screen.getAllByRole('button');
-      expect(cards).toHaveLength(6);
+      expect(cards).toHaveLength(8);
       expect(cards[cards.length - 1]).toHaveTextContent('Kasir');
     });
 
     it('opens on the first customer and returns home', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       expect(screen.getByRole('heading', { name: 'Kasir' })).toBeInTheDocument();
@@ -91,7 +96,7 @@ describe('Kasir', () => {
 
   describe('a customer arrives', () => {
     it('shows what is bought, what it costs and what was paid', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       const { item, price, paid } = CHECKOUTS[0];
@@ -102,7 +107,7 @@ describe('Kasir', () => {
     });
 
     it('says the price, the payment and the instruction out loud, as one sentence', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       expect(spokenTexts).toContain(
@@ -111,7 +116,7 @@ describe('Kasir', () => {
     });
 
     it('starts with no change given, and the amount owed still a question', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       expect(display()).toHaveTextContent('Rp 0');
@@ -128,14 +133,14 @@ describe('Kasir', () => {
     const FOUR = ['Tambah Rp 500', 'Tambah Rp 1.000', 'Tambah Rp 2.000', 'Tambah Rp 5.000'];
 
     it('always holds the same four pieces: 500, 1.000, 2.000 and 5.000', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       expect(trayNames()).toEqual(FOUR);
     });
 
     it('never hides a piece for being too big, even when only Rp 500 is owed', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       // This customer is owed Rp 500, yet the Rp 5.000 piece is right there:
@@ -145,7 +150,7 @@ describe('Kasir', () => {
     });
 
     it('is unchanged from the first customer to the last, and part-way through a count', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openAt(user, OWES_8000);
 
       expect(trayNames()).toEqual(FOUR);
@@ -156,7 +161,7 @@ describe('Kasir', () => {
     });
 
     it('has every piece enabled to start with', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       for (const name of FOUR) expect(screen.getByRole('button', { name })).toBeEnabled();
@@ -165,7 +170,7 @@ describe('Kasir', () => {
 
   describe('giving the right change', () => {
     it('finishes a one-piece round: shows the sum, announces the change and celebrates', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       await give(user, 500);
@@ -180,7 +185,7 @@ describe('Kasir', () => {
     });
 
     it('praises after the change, without cutting it off', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
       await give(user, 500);
 
@@ -194,7 +199,7 @@ describe('Kasir', () => {
     });
 
     it('accepts any combination that adds up - the order and the pieces are the child\'s choice', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openAt(user, OWES_3000);
 
       // 3.000 as 500 + 1.000 + 500 + 1.000, not the tidy 2.000 + 1.000.
@@ -205,14 +210,15 @@ describe('Kasir', () => {
     });
 
     it('works out for every customer, whichever way the pieces are taken', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       for (let n = 0; n < CHECKOUTS.length; n += 1) {
-        // Smallest pieces only - the longest way of paying - for odd customers,
-        // largest first for even ones.
+        // Largest first for even customers, smallest first for odd ones: the same
+        // pieces either way, so the total is the same. (Rp 500 cannot be tapped
+        // over and over any more - see "the limits on each piece".)
         const owed = changeOwed(CHECKOUTS[n]);
-        const pieces = n % 2 === 0 ? piecesFor(owed) : Array<number>(owed / 500).fill(500);
+        const pieces = n % 2 === 0 ? piecesFor(owed) : piecesFor(owed).reverse();
         await give(user, ...pieces);
 
         expect(screen.getByRole('button', { name: 'Pembeli berikutnya' }), CHECKOUTS[n].item).toBeInTheDocument();
@@ -223,7 +229,7 @@ describe('Kasir', () => {
 
   describe('the feedback on each piece', () => {
     it('reports only the change given so far - never the price plus the change', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openAt(user, OWES_3000); // price 7.000, owed 3.000
 
       spokenTexts.length = 0;
@@ -241,7 +247,7 @@ describe('Kasir', () => {
     });
 
     it('shows that same total on the display, and nothing else', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openAt(user, OWES_3000);
 
       await give(user, 1000);
@@ -253,7 +259,7 @@ describe('Kasir', () => {
     });
 
     it('writes each step as change adding up from nothing', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openAt(user, OWES_3000);
       await give(user, 1000, 500);
 
@@ -265,7 +271,7 @@ describe('Kasir', () => {
     });
 
     it('does not finish early, and keeps the answer hidden until it is right', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openAt(user, OWES_3000);
       await give(user, 2000);
 
@@ -275,7 +281,7 @@ describe('Kasir', () => {
     });
 
     it('announces the total of a finished count in the same words as before', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openAt(user, OWES_1500);
       await give(user, 500, 1000);
 
@@ -283,9 +289,106 @@ describe('Kasir', () => {
     });
   });
 
+  describe('the limits on each piece', () => {
+    const usesLeft = (amount: number) => Number(piece(amount).getAttribute('data-uses-left'));
+    const pips = (amount: number) => piece(amount).querySelectorAll('span[aria-hidden="true"] > span').length;
+
+    it('show how many times each piece may be given, as dots on the piece', async () => {
+      const user = setupUser();
+      await openKasir(user);
+
+      for (const amount of CHANGE_PIECES) {
+        expect(usesLeft(amount), String(amount)).toBe(PIECE_LIMITS[amount]);
+        expect(pips(amount), String(amount)).toBe(PIECE_LIMITS[amount]);
+      }
+      expect(PIECE_LIMITS[500]).toBeLessThanOrEqual(3); // Rp 500 only one to three times
+    });
+
+    it('count down as a piece is used, and say so to assistive tech', async () => {
+      const user = setupUser();
+      await openAt(user, 8); // Mainan: owed 4.500 - room to use pieces
+      await give(user, 500);
+
+      expect(usesLeft(500)).toBe(PIECE_LIMITS[500] - 1);
+      expect(piece(500)).toHaveAccessibleDescription(`Masih bisa ${PIECE_LIMITS[500] - 1} kali`);
+    }, 20_000);
+
+    it('switch a piece off once it has been used up, and leave the others alone', async () => {
+      const user = setupUser();
+      await openAt(user, 6); // Buku: owed 3.500
+      await give(user, 500, 500, 500);
+
+      expect(piece(500)).toBeDisabled();
+      expect(usesLeft(500)).toBe(0);
+      expect(piece(500)).toHaveAccessibleDescription('Sudah habis untuk pembeli ini');
+      expect(piece(1000)).toBeEnabled();
+      expect(piece(2000)).toBeEnabled();
+      expect(trayNames()).toHaveLength(4); // still all four, in their places
+    }, 20_000);
+
+    it('do not let a used-up piece be given again', async () => {
+      const user = setupUser();
+      await openAt(user, 6);
+      await give(user, 500, 500, 500);
+      await user.click(piece(500));
+
+      expect(display()).toHaveTextContent('Rp 1.500');
+    }, 20_000);
+
+    it('give every customer a way to the right change within the limits', async () => {
+      const user = setupUser();
+      await openKasir(user);
+
+      for (let n = 0; n < CHECKOUTS.length; n += 1) {
+        await give(user, ...piecesFor(changeOwed(CHECKOUTS[n])));
+        expect(screen.getByRole('button', { name: 'Pembeli berikutnya' }), CHECKOUTS[n].item).toBeInTheDocument();
+        await next(user);
+      }
+    });
+
+    it('say "Salah, hitung kembali" as soon as the right change can no longer be made', async () => {
+      const user = setupUser();
+      await openAt(user, OWES_3000); // owed 3.000
+      spokenTexts.length = 0;
+      await give(user, 500, 500, 500); // 1.500 so far, and no more Rp 500: the other 1.500 cannot be made
+
+      expect(screen.getByRole('alert')).toHaveTextContent('Salah, hitung kembali');
+      expect(spokenTexts).toContain('Salah, hitung kembali');
+      expect(piece(1000)).toBeDisabled(); // held while it clears, like going over
+    }, 20_000);
+
+    it('start the customer again with every piece full, after a wrong count is cleared', async () => {
+      const user = setupUser();
+      await openAt(user, OWES_3000);
+      await give(user, 500, 500, 500);
+      await user.click(screen.getByRole('button', { name: 'Ulangi hitungan' }));
+
+      expect(display()).toHaveTextContent('Rp 0');
+      expect(usesLeft(500)).toBe(PIECE_LIMITS[500]);
+      expect(piece(500)).toBeEnabled();
+      expect(WRONG_RESET_MS).toBeGreaterThan(0);
+    }, 20_000);
+
+    it('do not call a count wrong while the right change can still be made', async () => {
+      const user = setupUser();
+      await openAt(user, 6); // Buku: owed 3.500 = 2.000 + 1.000 + 500
+      await give(user, 500, 500, 500); // 1.500: the other 2.000 is one piece
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    }, 20_000);
+
+    it('still glow on the piece to give next for a child being guided', async () => {
+      window.localStorage.setItem(HINTS_STORAGE_KEY, JSON.stringify({ kasir: { level: 'guided', streak: 0 } }));
+      const user = setupUser();
+      await openAt(user, 1); // Kue: owed 1.000, after one right piece for the first customer
+      expect(piece(1000)).toHaveAttribute('data-hint', 'true');
+      expect(piece(500)).not.toHaveAttribute('data-hint');
+    });
+  });
+
   describe('giving too much', () => {
     it('answers "Salah, hitung kembali" - in words on screen and out loud', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user); // owed 500
 
       spokenTexts.length = 0;
@@ -296,7 +399,7 @@ describe('Kasir', () => {
     });
 
     it('reports nothing else: not the total, and not a celebration', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       spokenTexts.length = 0;
@@ -307,7 +410,7 @@ describe('Kasir', () => {
     });
 
     it('shows the step that went over, so the mistake can be seen', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openAt(user, OWES_1500);
       await give(user, 1000, 2000); // 3.000 > 1.500
 
@@ -316,7 +419,7 @@ describe('Kasir', () => {
     });
 
     it('is caught when the amount owed is passed by as little as Rp 500', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openAt(user, OWES_1500);
       await give(user, 1000, 1000); // 2.000: only 500 over 1.500
 
@@ -324,7 +427,7 @@ describe('Kasir', () => {
     });
 
     it('is not "wrong" on exactly the amount owed, however it is reached', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openAt(user, OWES_1500);
       await give(user, 1000, 500); // exactly 1.500
 
@@ -333,7 +436,7 @@ describe('Kasir', () => {
     });
 
     it('is also caught by a piece that overshoots from part-way', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openAt(user, OWES_3000);
       await give(user, 2000, 2000); // 4.000 > 3.000
 
@@ -341,7 +444,7 @@ describe('Kasir', () => {
     });
 
     it('holds the tray while the mistake is cleared, so a flurry of taps cannot pile on', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
       await give(user, 1000);
 
@@ -349,11 +452,14 @@ describe('Kasir', () => {
     });
 
     it('then clears the count by itself, and the same customer can be tried again', async () => {
-      const user = userEvent.setup();
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const user = setupUser({ advanceTimers: vi.advanceTimersByTime });
       await openKasir(user);
       await give(user, 1000);
+      expect(display()).toHaveTextContent('Rp 1.000'); // still on show, to be seen
 
-      await waitFor(() => expect(display()).toHaveTextContent('Rp 0'), { timeout: 4000 });
+      await act(() => vi.advanceTimersByTimeAsync(WRONG_RESET_MS + 100));
+      expect(display()).toHaveTextContent('Rp 0');
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       expect(screen.queryByText(/^Langkah /)).not.toBeInTheDocument();
       for (const name of trayNames()) expect(screen.getByRole('button', { name: name! })).toBeEnabled();
@@ -362,10 +468,11 @@ describe('Kasir', () => {
       expect(screen.getByRole('region', { name: 'Pembeli' })).toHaveTextContent(CHECKOUTS[0].item);
       await give(user, 500);
       expect(screen.getByTestId('celebration')).toBeInTheDocument();
-    }, 10000);
+      vi.useRealTimers();
+    });
 
     it('can be cleared at once with the redo button, without waiting', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
       await give(user, 1000);
 
@@ -377,7 +484,7 @@ describe('Kasir', () => {
     });
 
     it('can go wrong again and again - there is no penalty to accumulate', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       for (let i = 0; i < 3; i += 1) {
@@ -393,7 +500,7 @@ describe('Kasir', () => {
 
   describe('moving between customers', () => {
     it('goes on to the next customer, with the count and the tray back to the start', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
       await serve(user, 0);
 
@@ -403,7 +510,7 @@ describe('Kasir', () => {
     });
 
     it('goes round again after the last customer', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
       for (let n = 0; n < CHECKOUTS.length; n += 1) await serve(user, n);
 
@@ -411,7 +518,7 @@ describe('Kasir', () => {
     });
 
     it('repeats the customer\'s words when the count is redone', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
       await give(user, 500);
 
@@ -425,7 +532,7 @@ describe('Kasir', () => {
     });
 
     it('offers the redo button only once something has been given', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       expect(screen.queryByRole('button', { name: 'Ulangi hitungan' })).not.toBeInTheDocument();
@@ -436,7 +543,7 @@ describe('Kasir', () => {
 
   describe('the sounds', () => {
     it('clinks a coin for each piece that is still short, and opens the register only when right', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openAt(user, OWES_1500);
 
       playedToneCounts.value = 0;
@@ -455,7 +562,7 @@ describe('Kasir', () => {
     });
 
     it('answers too much with the soft nudge - two quiet notes - and no register', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       playedToneCounts.value = 0;
@@ -474,7 +581,7 @@ describe('Kasir', () => {
         audio: [],
         images: ['shop/permen.png', 'money/2000.png', 'money/500.png', 'money/5000.png'],
       });
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       const customer = screen.getByRole('region', { name: 'Pembeli' });
@@ -487,7 +594,7 @@ describe('Kasir', () => {
     });
 
     it('keep the built-in icons for anything without a picture', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openKasir(user);
 
       const customer = screen.getByRole('region', { name: 'Pembeli' });
@@ -499,7 +606,7 @@ describe('Kasir', () => {
 
 describe('Kasir without an Indonesian voice', () => {
   it('respells every sentence it speaks, so an English voice lands closer to Indonesian', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await openKasir(user);
 
     const intro = 'Harganya seribu lima ratus rupiah. Dibayar dua ribu rupiah. Ayo hitung kembaliannya!';
@@ -512,7 +619,7 @@ describe('Kasir without an Indonesian voice', () => {
   });
 
   it('respells "Salah, hitung kembali" too', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await openKasir(user);
     await user.click(piece(5000));
 

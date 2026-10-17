@@ -1,16 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from './user';
 import App from '../App';
 import { installVoice, spokenUtterances } from './setup';
-import {
-  EN_VOICE_RESPELL,
-  GREETING_ID,
-  LETTER_NAMES_ID,
-  NUMBER_WORDS_ID,
-  PRAISE_ID,
-  respellForEnglishVoice,
-} from '../hooks/useAudio';
+import { EN_VOICE_RESPELL, respellForEnglishVoice } from '../audio/respell';
+import { GREETING_ID, LETTER_NAMES_ID, NUMBER_WORDS_ID, PRAISE_ID } from '../audio/words';
 import { WORD_CARDS } from '../data/curriculum';
 import { MAZE_LEVELS } from '../data/maze';
 import { SPOKEN_AMOUNTS } from '../data/money';
@@ -104,7 +98,7 @@ describe('speaking Indonesian without an Indonesian voice', () => {
 
   describe('with no Indonesian voice installed', () => {
     it('respells the greeting and marks it as English', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
       await user.click(screen.getByRole('heading', { name: 'Belajar Yuk!' }));
 
@@ -118,7 +112,7 @@ describe('speaking Indonesian without an Indonesian voice', () => {
     });
 
     it('respells the counting instruction', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
       await user.click(screen.getByRole('button', { name: /Berhitung/ }));
 
@@ -134,7 +128,7 @@ describe('speaking Indonesian without an Indonesian voice', () => {
     it('uses the real Indonesian spelling and that voice', async () => {
       installVoice('Microsoft Andika', 'id-ID');
 
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
       await user.click(screen.getByRole('heading', { name: 'Belajar Yuk!' }));
 
@@ -149,7 +143,7 @@ describe('speaking Indonesian without an Indonesian voice', () => {
     it('speaks letter names with the proper Indonesian spelling', async () => {
       installVoice('Microsoft Andika', 'id-ID');
 
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
       await user.click(screen.getByRole('button', { name: /Mengenal Huruf/ }));
       await user.keyboard('{ArrowRight}'); // A -> B
@@ -164,7 +158,7 @@ describe('speaking Indonesian without an Indonesian voice', () => {
 
   describe('the English toggle', () => {
     it('is never touched by the Indonesian workaround', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
       await user.click(screen.getByRole('button', { name: /Mengenal Huruf/ }));
       await user.click(screen.getByRole('radio', { name: /English/ }));

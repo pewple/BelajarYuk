@@ -10,8 +10,8 @@ import { HIJAIYAH, alphabetSize } from '../data/scripts';
 import type { Script } from '../data/scripts';
 import { useAudio } from '../hooks/useAudio';
 import { useArrowKeys } from '../hooks/useArrowKeys';
-import type { LetterLang } from '../hooks/useAudio';
-import { useIdleReminder } from '../hooks/useIdleReminder';
+import type { LetterLang } from '../audio/words';
+import { useInstruction } from '../hooks/useInstruction';
 import { useTapLock } from '../hooks/useTapLock';
 import { CLIP_IDS } from '../media/clips';
 import { arabicLetterPart } from '../media/scriptVoice';
@@ -76,15 +76,13 @@ export function AlphabetScreen({
     reportGame(`${script}:${index}`);
   }, [arabic, hijaiyah, index, latin, letterLang, playVoice, reportGame, script, speakLetter]);
 
-  // Said once on arriving, and once more if the child goes quiet.
   const instruct = useCallback(
     () => playVoice(stepsFor([{ clip: CLIP_IDS.tapLetter, text: 'Ketuk hurufnya!' }])),
     [playVoice],
   );
-  useEffect(() => {
-    instruct();
-  }, [instruct]);
-  useIdleReminder(true, `${script}:${index}`, instruct);
+  // Once on arriving - not again for every card - and once more if the child
+  // goes quiet, which starts its wait again with each new card.
+  useInstruction(instruct, 'arriving', { idleKey: `${script}:${index}` });
 
   const step = useCallback(
     (delta: number) => {

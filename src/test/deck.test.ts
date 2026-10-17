@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ARABIC_WORD_CARDS, arabicWordPictureId } from '../data/arabicWords';
 import { HIJAIYAH } from '../data/scripts';
-import { respellForEnglishVoice } from '../hooks/useAudio';
+import { respellForEnglishVoice } from '../audio/respell';
 import { arabicWordClipId } from '../media/clips';
 import { arabicWordPart } from '../media/scriptVoice';
 import { buildSlots, slotIds } from '../media/slots';

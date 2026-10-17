@@ -6,3 +6,4 @@ dist-ssr
 run.cmd
 *.tsbuildinfo
 release
+.vitest

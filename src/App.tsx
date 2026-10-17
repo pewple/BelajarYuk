@@ -7,12 +7,15 @@ import { PronunciationScreen } from './screens/PronunciationScreen';
 import { CountingScreen } from './screens/CountingScreen';
 import { KasirScreen } from './screens/KasirScreen';
 import { LabirinScreen } from './screens/LabirinScreen';
+import { MemoriScreen } from './screens/MemoriScreen';
+import { MenulisScreen } from './screens/MenulisScreen';
 import { PolaScreen } from './screens/PolaScreen';
 import { RestBreak } from './components/RestBreak';
+import { VersionBadge } from './components/VersionBadge';
 import { useAudio } from './hooks/useAudio';
 import { useRestBreak } from './hooks/useRestBreak';
 import { PlayProvider } from './state/play';
-import type { LetterLang } from './hooks/useAudio';
+import type { LetterLang } from './audio/words';
 import type { Script } from './data/scripts';
 import type { ScreenId } from './types';
 
@@ -94,10 +97,18 @@ export default function App() {
     if (screen === 'home' && restDue) notePause();
   }, [screen, restDue, notePause]);
 
+  // The home button ends the game. Anything else just puts the rest screen away:
+  // play goes on where it was, and the quarter hour starts again.
   const finishRest = useCallback(() => {
     rest.dismiss();
     goHome();
   }, [goHome, rest]);
+
+  const { dismiss: dismissRest } = rest;
+  const continuePlaying = useCallback(() => {
+    stopSpeaking();
+    dismissRest();
+  }, [dismissRest, stopSpeaking]);
 
   // The choice lives above the screens so it survives navigation, and in
   // localStorage so a parent sets it once rather than every session.
@@ -121,7 +132,14 @@ export default function App() {
     }
   }, []);
 
-  if (mediaCheck) return <MediaCheckScreen onBack={leaveMediaCheck} />;
+  if (mediaCheck) {
+    return (
+      <>
+        <MediaCheckScreen onBack={leaveMediaCheck} />
+        <VersionBadge />
+      </>
+    );
+  }
 
   let content: ReactNode;
   switch (screen) {
@@ -149,8 +167,16 @@ export default function App() {
     case 'hitung':
       content = <CountingScreen onHome={goHome} script={script} onScriptChange={changeScript} />;
       break;
+    case 'menulis':
+      content = <MenulisScreen onHome={goHome} letterLang={letterLang} />;
+      break;
     case 'pola':
       content = <PolaScreen onHome={goHome} />;
+      break;
+    case 'memori':
+      content = (
+        <MemoriScreen onHome={goHome} letterLang={letterLang} script={script} onScriptChange={changeScript} />
+      );
       break;
     case 'labirin':
       content = (
@@ -182,7 +208,8 @@ export default function App() {
   return (
     <PlayProvider resetKey={screen} onGame={notePause}>
       {content}
-      {rest.resting && <RestBreak onDone={finishRest} />}
+      <VersionBadge />
+      {rest.resting && <RestBreak onHome={finishRest} onContinue={continuePlaying} />}
     </PlayProvider>
   );
 }

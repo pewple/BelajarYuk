@@ -10,6 +10,15 @@
 export const UNLOCK_AFTER_GAMES = 5;
 
 /**
+ * Failures in a row, in one visit, after which the home button is let go too.
+ *
+ * A child who has got it wrong three times running is not being careless, they
+ * are stuck, and the likeliest thing they want is to leave. Holding the exit
+ * shut on someone who is already frustrated would be the opposite of helpful.
+ */
+export const UNLOCK_AFTER_FAILURES = 3;
+
+/**
  * Screen time after which the app suggests a rest. Paediatric guidance for
  * ages 2-5 is about an hour a day in total, with a grown-up alongside, so one
  * unbroken stretch of a quarter hour is already plenty.

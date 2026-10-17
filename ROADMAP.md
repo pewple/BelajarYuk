@@ -20,6 +20,9 @@ dan didampingi orang dewasa; di bawah 2 tahun sebaiknya tanpa layar.
 - [x] Aksesibilitas: target ≥ 64 px, kontras diperiksa, gerak dikurangi, dialog modal
 - [x] Modul Pola (AB, AAB, ABB, ABC)
 - [x] Dapat dipasang sebagai aplikasi dan jalan tanpa internet (PWA)
+- [x] Nomor versi di pojok kanan atas; catatan PWA dan privasi di layar utama
+- [x] Modul Memori (mencari pasangan: gambar sama, lalu huruf dan gambar)
+- [x] Modul Menulis (menelusuri huruf A–Z dan angka 0–9 dengan jari)
 
 ## Belum / sengaja ditunda
 
@@ -28,6 +31,9 @@ dan didampingi orang dewasa; di bawah 2 tahun sebaiknya tanpa layar.
 - [ ] Dorongan keluar layar di akhir sesi ("cari huruf A di kemasan")
 - [ ] Gambar asli (bukan ikon) untuk dek Arab — empat kata memakai gambar buatan sendiri
       (keju, roti, beruang, emas) dan beberapa ikon hanya pendekatan (raʾs = ikon orang)
+- [ ] Menelusuri huruf hijaiyah dan angka ١–٩ di Menulis (butuh garis yang dibuat/diperiksa
+      orang yang menulis Arab; bentuk bersambung, titik, dan urutan goresan khusus)
+- [ ] Menelusuri huruf kecil (a–z) dan angka 10
 - [ ] Kata kedua tiap huruf Arab dari daftar awal (أَسَد, بَيْت, تَاج …) sebagai kartu cadangan
 
 ## Modul berikutnya
@@ -36,11 +42,9 @@ dan didampingi orang dewasa; di bawah 2 tahun sebaiknya tanpa layar.
 | --- | --- | --- |
 | Harakat (Iqra 1) | Fathah, kasrah, dhammah di atas ba, ta, tsa… | Lanjutan alami dari hijaiyah |
 | Bentuk & warna | Mencocokkan, menyortir | Bentuk dan warna sudah ada di Pola |
-| Mencocokkan / memori | Pasangan gambar–huruf, 4 kartu dulu | Melatih ingatan kerja |
 | Tambah sederhana | 1 + 2 dengan benda yang bisa dihitung | Setelah Berhitung dikuasai |
-| Menelusuri huruf | Jari mengikuti garis huruf | Kontrol motorik halus; tolerir garis yang meleset |
 | Lagu & doa pendek | Lagu anak Indonesia, doa harian dengan teks | Rekam sendiri (hak cipta) |
 | Perasaan | Wajah senang/sedih/marah | Kosakata emosi, bagus untuk didampingi |
 | Rutinitas harian | Urutkan pagi–malam | Konsep waktu & urutan |
 
-Saran urutan: Harakat → Mencocokkan → Tambah sederhana.
+Saran urutan: Harakat → Tambah sederhana → Lagu & doa pendek.

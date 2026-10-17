@@ -9,6 +9,9 @@ type MoneyPieceProps = {
   disabled?: boolean;
   /** Glows to say "this one next". Only while the child is still being guided. */
   hinted?: boolean;
+  /** How many more times this piece may be given to this customer, and how many in all. */
+  usesLeft?: number;
+  maxUses?: number;
 };
 
 /**
@@ -18,8 +21,17 @@ type MoneyPieceProps = {
  * from the first customer to the last - a toddler learns where the coin is
  * by where it always is.
  */
-export function MoneyPiece({ amount, onClick, disabled = false, hinted = false }: MoneyPieceProps) {
+export function MoneyPiece({
+  amount,
+  onClick,
+  disabled = false,
+  hinted = false,
+  usesLeft,
+  maxUses,
+}: MoneyPieceProps) {
   const look = PIECE_LOOK[amount];
+  const limited = usesLeft !== undefined && maxUses !== undefined;
+  const noteId = `uses-${amount}`;
 
   return (
     <button
@@ -28,6 +40,8 @@ export function MoneyPiece({ amount, onClick, disabled = false, hinted = false }
       disabled={disabled}
       aria-label={`Tambah ${formatRupiah(amount)}`}
       data-hint={hinted ? 'true' : undefined}
+      data-uses-left={limited ? usesLeft : undefined}
+      aria-describedby={limited ? noteId : undefined}
       className={`toddler-tap ${hinted ? 'animate-gentle-bob ring-4 ring-amber-400 ring-offset-2' : ''} flex h-28 w-full flex-col items-center justify-center gap-1 rounded-[2rem] bg-gradient-to-br ${look.theme} px-3 text-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 disabled:opacity-40 disabled:active:scale-100 sm:h-36`}
     >
       <CardArt
@@ -41,6 +55,23 @@ export function MoneyPiece({ amount, onClick, disabled = false, hinted = false }
         <span className="text-base font-bold opacity-80 sm:text-lg">Rp </span>
         {formatNumber(amount)}
       </span>
+
+      {limited && (
+        <>
+          {/* One dot for each time it may still be given: they empty as it is used. */}
+          <span aria-hidden="true" className="flex gap-1">
+            {Array.from({ length: maxUses }, (_, i) => (
+              <span
+                key={i}
+                className={`size-2.5 rounded-full ring-2 ring-white ${i < usesLeft ? 'bg-white' : 'bg-transparent'}`}
+              />
+            ))}
+          </span>
+          <span id={noteId} className="sr-only">
+            {usesLeft === 0 ? 'Sudah habis untuk pembeli ini' : `Masih bisa ${usesLeft} kali`}
+          </span>
+        </>
+      )}
     </button>
   );
 }

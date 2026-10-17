@@ -1,13 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Banknote, Check, RotateCcw } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Banknote, RotateCcw } from 'lucide-react';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { Celebration } from '../components/Celebration';
 import { CardArt } from '../components/CardArt';
 import { MoneyPiece } from '../components/MoneyPiece';
+import { IconButton, NextButton } from '../components/RoundButtons';
 import {
   CHANGE_PIECES,
   CHECKOUTS,
+  PIECE_LIMITS,
+  canFinish,
   nextCheckout,
+  nextPieceHint,
+  usesLeft,
   PIECE_LOOK,
   changeOwed,
   changeSteps,
@@ -17,10 +22,10 @@ import {
   rupiahWords,
 } from '../data/money';
 import { KASIR_PREFIX, dueForReview, kasirItemKey, recordResult } from '../data/review';
-import { KNOWS_THE_DRILL_AFTER } from '../data/session';
-import { CHEER_PROSODY, useAudio } from '../hooks/useAudio';
+import { CHEER_PROSODY } from '../audio/voice';
+import { useAudio } from '../hooks/useAudio';
 import { useHints } from '../hooks/useHints';
-import { useIdleReminder } from '../hooks/useIdleReminder';
+import { useInstruction, useKnowsTheDrill } from '../hooks/useInstruction';
 import { useTapLock } from '../hooks/useTapLock';
 import { useGameFinished, usePlay } from '../state/play';
 import {
@@ -64,7 +69,8 @@ export const WRONG_RESET_MS = 2600;
 export function KasirScreen({ onHome }: KasirScreenProps) {
   const { playVoice, praiseStep, playCoin, playRegister, playNudge, playTap } = useAudio();
   const { guided, record } = useHints('kasir');
-  const { gamesDone } = usePlay();
+  const { reportAttempt } = usePlay();
+  const knowsTheDrill = useKnowsTheDrill();
   const once = useTapLock();
 
   const [round, setRound] = useState(0);
@@ -83,17 +89,11 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
   const given = steps.length > 0 ? steps[steps.length - 1].total : 0;
   const verdict = judgeChange(given, owed);
   const done = verdict === 'exact';
-  const over = verdict === 'over';
+  // Wrong is too much - or short with no way left to make the rest, because the
+  // pieces that could have done it have been used up.
+  const over = verdict === 'over' || (verdict === 'short' && !canFinish(owed, pieces));
 
   useGameFinished(done);
-
-  // Once a few customers have been served the child knows what to do, so the
-  // customer just says what they bought and paid - and "Ayo hitung" goes. Held
-  // in a ref: finishing the third game must not make the app re-announce.
-  const knowsTheDrill = useRef(false);
-  useEffect(() => {
-    knowsTheDrill.current = gamesDone >= KNOWS_THE_DRILL_AFTER;
-  }, [gamesDone]);
 
   const announce = useCallback(
     (full: boolean) =>
@@ -102,19 +102,19 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
   );
 
   // The instruction is spoken, not just written: a pre-reader cannot read
-  // "Harga Rp 3.000", so the customer announces themselves out loud.
-  useEffect(() => {
-    announce(!knowsTheDrill.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new customer or a retry, nothing else
-  }, [round, attempt, price, paid, playVoice]);
-
-  // A child who goes quiet hears it once more, in full.
+  // "Harga Rp 3.000", so the customer announces themselves out loud. Once a few
+  // customers have been served the child knows what to do, so the customer just
+  // says what they bought and paid - and "Ayo hitung" goes. A child who goes
+  // quiet hears it once more, in full.
   const repeat = useCallback(() => announce(true), [announce]);
-  useIdleReminder(!done, `${round}-${attempt}`, repeat);
+  useInstruction(() => announce(!knowsTheDrill.current), `${round}-${attempt}`, {
+    remind: repeat,
+    active: !done,
+  });
 
-  // While guided, the biggest piece that still fits glows: "this one next".
-  const remaining = owed - given;
-  const hintedPiece = guided && !done && !over ? [...CHANGE_PIECES].reverse().find((p) => p <= remaining) : undefined;
+  // While guided, the biggest piece that still fits - and still leaves the right
+  // change reachable - glows: "this one next".
+  const hintedPiece = guided && !done && !over ? nextPieceHint(owed, pieces) : undefined;
 
   // After a wrong count the sum stays on screen long enough to see, then clears.
   // Derived from `over` rather than separate state, so a manual reset (which
@@ -127,17 +127,27 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
 
   const handlePiece = useCallback(
     (piece: number) => {
-      if (done || over) return;
+      if (done || over || usesLeft(pieces, piece) === 0) return;
 
       const total = given + piece;
-      const result = judgeChange(total, owed);
+      const verdictNow = judgeChange(total, owed);
+      // Too much - or not too much yet, but the way to the right change has closed.
+      const result =
+        verdictNow === 'short' && !canFinish(owed, [...pieces, piece]) ? ('over' as const) : verdictNow;
       setPieces((prev) => [...prev, piece]);
 
-      // Every piece is a choice: right if it still fits, wrong if it overshot.
-      // The hint level and the review book both learn from it.
-      record(result !== 'over');
-      if (result === 'over') recordResult(kasirItemKey(checkout.item), false);
-      else if (result === 'exact') recordResult(kasirItemKey(checkout.item), true);
+      // Every piece is a choice: right if it still leads to the right change,
+      // wrong if it does not. The hint level and the review book both learn from it.
+      // For leaving early what matters is how each whole count ended - a wrong
+      // one, or the right change - not each piece along the way.
+      record(result !== 'over', false);
+      if (result === 'over') {
+        recordResult(kasirItemKey(checkout.item), false);
+        reportAttempt(false);
+      } else if (result === 'exact') {
+        recordResult(kasirItemKey(checkout.item), true);
+        reportAttempt(true);
+      }
 
       if (result === 'over') {
         // Too much. A soft nudge and the words, never a buzzer - being wrong
@@ -157,7 +167,7 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
         playVoice(stepsFor(totalLine(total)));
       }
     },
-    [checkout.item, done, given, over, owed, playCoin, playNudge, playRegister, playVoice, praiseStep, record],
+    [checkout.item, done, given, over, owed, pieces, playCoin, playNudge, playRegister, playVoice, praiseStep, record, reportAttempt],
   );
 
   const handleReset = useCallback(() => {
@@ -330,7 +340,9 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
                 <MoneyPiece
                   key={piece}
                   amount={piece}
-                  disabled={over}
+                  disabled={over || usesLeft(pieces, piece) === 0}
+                  usesLeft={usesLeft(pieces, piece)}
+                  maxUses={PIECE_LIMITS[piece]}
                   hinted={piece === hintedPiece}
                   onClick={() => once(`piece-${piece}`, () => handlePiece(piece))}
                 />
@@ -341,28 +353,10 @@ export function KasirScreen({ onHome }: KasirScreenProps) {
 
         <div className="flex items-center justify-center gap-4">
           {pieces.length > 0 && (
-            <button
-              type="button"
-              onClick={() => once('reset', handleReset)}
-              aria-label="Ulangi hitungan"
-              className="toddler-tap flex size-20 items-center justify-center rounded-3xl bg-white text-slate-600 shadow-lg ring-2 ring-slate-200 outline-none hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-sky-400 active:scale-95"
-            >
-              <RotateCcw className="size-9" strokeWidth={2.6} />
-            </button>
+            <IconButton label="Ulangi hitungan" icon={RotateCcw} onClick={() => once('reset', handleReset)} />
           )}
 
-          {done && (
-            <button
-              type="button"
-              onClick={() => once('next', handleNext)}
-              aria-label="Pembeli berikutnya"
-              className="toddler-tap flex h-20 items-center justify-center gap-3 rounded-3xl bg-emerald-600 px-8 text-2xl font-black text-white shadow-xl outline-none hover:bg-emerald-700 focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95"
-            >
-              <Check className="size-8" strokeWidth={3} />
-              Lanjut
-              <ArrowRight className="size-8" strokeWidth={3} />
-            </button>
-          )}
+          {done && <NextButton label="Pembeli berikutnya" onClick={() => once('next', handleNext)} />}
         </div>
       </div>
     </ScreenFrame>

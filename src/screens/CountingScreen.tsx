@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Check, RotateCcw } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { RotateCcw } from 'lucide-react';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { Celebration } from '../components/Celebration';
 import { CardArt } from '../components/CardArt';
+import { IconButton, NextButton } from '../components/RoundButtons';
 import { ScriptToggle } from '../components/ScriptToggle';
 import { COUNTING_SETS, MAX_COUNT } from '../data/curriculum';
 import { formatNumeral } from '../data/scripts';
@@ -10,11 +11,12 @@ import type { Script } from '../data/scripts';
 import { countingPicture } from '../media/pictures';
 import { numberPart } from '../media/scriptVoice';
 import { stepsFor } from '../media/voiceParts';
-import { CHEER_PROSODY, numberWordId, useAudio } from '../hooks/useAudio';
-import { KNOWS_THE_DRILL_AFTER } from '../data/session';
-import { useIdleReminder } from '../hooks/useIdleReminder';
+import { CHEER_PROSODY } from '../audio/voice';
+import { numberWordId } from '../audio/words';
+import { useAudio } from '../hooks/useAudio';
+import { useInstruction, useKnowsTheDrill } from '../hooks/useInstruction';
 import { useTapLock } from '../hooks/useTapLock';
-import { useGameFinished, usePlay } from '../state/play';
+import { useGameFinished } from '../state/play';
 
 type CountingScreenProps = {
   onHome: () => void;
@@ -62,7 +64,7 @@ function rowWidth(total: number): string {
 export function CountingScreen({ onHome, script, onScriptChange }: CountingScreenProps) {
   const { speakCountPrompt, playVoice, praiseStep, playPop, playChime, playTap } = useAudio();
   const arabic = script === 'arab';
-  const { gamesDone } = usePlay();
+  const knowsTheDrill = useKnowsTheDrill();
   const once = useTapLock();
 
   const [round, setRound] = useState(1);
@@ -82,19 +84,12 @@ export function CountingScreen({ onHome, script, onScriptChange }: CountingScree
   // Auditory instruction at the top of a count. A pre-reader cannot read
   // "Ketuk satu per satu", so the app says what to do out loud instead. After
   // a few finished rounds the child knows the drill and it is left out - saying
-  // "Ayo hitung!" before every single round would be nagging. Held in a ref so
-  // finishing the third round does not itself trigger the prompt.
-  const knowsTheDrill = useRef(false);
-  useEffect(() => {
-    knowsTheDrill.current = gamesDone >= KNOWS_THE_DRILL_AFTER;
-  }, [gamesDone]);
-
-  useEffect(() => {
-    if (!knowsTheDrill.current) speakCountPrompt();
-  }, [attempt, round, speakCountPrompt]);
-
-  // A child who goes quiet mid-count hears it once more.
-  useIdleReminder(!isDone, `${round}-${attempt}`, speakCountPrompt);
+  // "Ayo hitung!" before every single round would be nagging. A child who goes
+  // quiet mid-count hears it once more.
+  useInstruction(speakCountPrompt, `${round}-${attempt}`, {
+    quiet: () => knowsTheDrill.current,
+    active: !isDone,
+  });
 
   const startRound = useCallback((n: number) => {
     setRound(n);
@@ -226,27 +221,13 @@ export function CountingScreen({ onHome, script, onScriptChange }: CountingScree
       </div>
 
       <div className="mt-8 flex items-center gap-4">
-        <button
-          type="button"
-          onClick={() => once('reset', handleReset)}
-          aria-label="Ulangi hitungan"
-          className="toddler-tap flex size-20 items-center justify-center rounded-3xl bg-white text-slate-600 shadow-lg ring-2 ring-slate-200 outline-none hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-sky-400 active:scale-95"
-        >
-          <RotateCcw className="size-9" strokeWidth={2.6} />
-        </button>
+        <IconButton label="Ulangi hitungan" icon={RotateCcw} onClick={() => once('reset', handleReset)} />
 
-        <button
-          type="button"
+        <NextButton
+          label={round >= MAX_COUNT ? 'Mulai lagi dari satu' : `Lanjut ke angka ${round + 1}`}
+          ready={isDone}
           onClick={() => once('next', handleNext)}
-          aria-label={round >= MAX_COUNT ? 'Mulai lagi dari satu' : `Lanjut ke angka ${round + 1}`}
-          className={`toddler-tap flex h-20 items-center justify-center gap-3 rounded-3xl px-8 text-2xl font-black text-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 ${
-            isDone ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-500 hover:bg-slate-600'
-          }`}
-        >
-          {isDone ? <Check className="size-8" strokeWidth={3} /> : null}
-          Lanjut
-          <ArrowRight className="size-8" strokeWidth={3} />
-        </button>
+        />
       </div>
 
       <div className="mt-6">

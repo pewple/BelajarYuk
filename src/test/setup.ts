@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import * as React from 'react';
 import { reloadMedia } from '../media/manifest';
 import { HINTS_STORAGE_KEY } from '../data/hints';
 import { setTapLockMs } from '../hooks/useTapLock';
@@ -194,6 +195,8 @@ beforeEach(() => {
       JSON.stringify({
         labirin: { level: 'independent', streak: 0 },
         kasir: { level: 'independent', streak: 0 },
+        memori: { level: 'independent', streak: 0 },
+        menulis: { level: 'independent', streak: 0 },
       }),
     );
   } catch {
@@ -221,3 +224,18 @@ afterEach(() => {
     /* Storage is optional; the app copes without it and so do the tests. */
   }
 });
+
+// React's development build captures a stack trace (an Error) for every element it
+// creates, so that a warning can say which component made it. That is about half of
+// the cost of every render in these tests, and nothing here reads those stacks. Tell
+// React it has already made plenty, which makes it stop - the counter is reset after
+// each commit, hence an accessor rather than a plain assignment.
+const reactInternals = (React as unknown as Record<string, Record<string, unknown> | undefined>)
+  .__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+if (reactInternals && 'recentlyCreatedOwnerStacks' in reactInternals) {
+  Object.defineProperty(reactInternals, 'recentlyCreatedOwnerStacks', {
+    configurable: true,
+    get: () => Number.MAX_SAFE_INTEGER,
+    set: () => undefined,
+  });
+}

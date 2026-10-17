@@ -1,7 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+
+/** The version shown in the corner of every page: package.json's, so there is one place to change it. */
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
 /**
  * Makes the production build openable straight from disk (file://).
@@ -30,6 +34,7 @@ function classicScriptForFileProtocol(): Plugin {
 }
 
 export default defineConfig({
+  define: { __APP_VERSION__: JSON.stringify(version) },
   // Relative URLs, so the folder works from any location: a USB stick, a
   // subfolder on a web host, or straight off the desktop.
   base: './',

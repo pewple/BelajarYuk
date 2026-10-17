@@ -27,6 +27,60 @@ export const DENOMINATIONS = [500, 1000, 2000, 5000, 10000, 20000] as const;
  */
 export const CHANGE_PIECES = [500, 1000, 2000, 5000] as const;
 
+/**
+ * How many times each piece may be handed over to one customer.
+ *
+ * Without a limit a child can reach any amount by tapping Rp 500 over and over,
+ * which is counting in halves rather than working out which notes make the
+ * change - and gets very long for Rp 8.000. The small coin is the most limited
+ * (one to three uses), the big note the least, so the way through is to use
+ * the larger pieces. Every customer can still be given exactly the right change
+ * within these limits (a test checks it).
+ */
+export const PIECE_LIMITS: Readonly<Record<number, number>> = { 500: 3, 1000: 4, 2000: 3, 5000: 2 };
+
+/** How many of each piece a run of pieces has used. */
+export function usesOf(pieces: readonly number[]): Record<number, number> {
+  const uses: Record<number, number> = {};
+  for (const piece of pieces) uses[piece] = (uses[piece] ?? 0) + 1;
+  return uses;
+}
+
+/** How many more times `piece` may be given after `pieces`. */
+export function usesLeft(pieces: readonly number[], piece: number): number {
+  return Math.max((PIECE_LIMITS[piece] ?? 0) - (usesOf(pieces)[piece] ?? 0), 0);
+}
+
+/**
+ * Can exactly `owed` still be made, given what has been handed over and the
+ * limits? Used to say "Salah, hitung kembali" at the moment the way to the
+ * right change has closed, instead of leaving a child stuck at a tray where
+ * nothing they tap can ever be right.
+ */
+export function canFinish(owed: number, pieces: readonly number[]): boolean {
+  const given = pieces.reduce((sum, p) => sum + p, 0);
+  if (given > owed) return false;
+
+  const left = CHANGE_PIECES.map((p) => usesLeft(pieces, p));
+  const reach = (index: number, remaining: number): boolean => {
+    if (remaining === 0) return true;
+    if (index === CHANGE_PIECES.length) return false;
+    for (let n = 0; n <= left[index] && n * CHANGE_PIECES[index] <= remaining; n += 1) {
+      if (reach(index + 1, remaining - n * CHANGE_PIECES[index])) return true;
+    }
+    return false;
+  };
+  return reach(0, owed - given);
+}
+
+/** The largest piece that could be handed over next and still leave the right change reachable. */
+export function nextPieceHint(owed: number, pieces: readonly number[]): number | undefined {
+  const given = pieces.reduce((sum, p) => sum + p, 0);
+  return [...CHANGE_PIECES]
+    .reverse()
+    .find((p) => p <= owed - given && usesLeft(pieces, p) > 0 && canFinish(owed, [...pieces, p]));
+}
+
 /** The largest amount that is ever shown or spoken. */
 export const MAX_AMOUNT = 20000;
 

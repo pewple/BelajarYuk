@@ -49,7 +49,7 @@ cpSync(dist, out, { recursive: true });
 // is dependency-free Node, and these folders almost never change. The media
 // check page (#media) is what actually verifies coverage.
 const AUDIO_FOLDERS = [
-  'letters/id', 'letters/en', 'letters/ar', 'words', 'words/ar', 'numbers', 'numbers/ar', 'maze', 'money', 'colors', 'praise',
+  'letters/id', 'letters/en', 'letters/ar', 'words', 'words/ar', 'numbers', 'numbers/ar', 'maze', 'money', 'colors', 'pola', 'praise',
   'phrases', 'ui',
 ];
 const IMAGE_FOLDERS = ['words', 'words/ar', 'counting', 'maze', 'shop', 'money', 'home'];

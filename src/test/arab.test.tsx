@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { setupUser } from './user';
 import App from '../App';
 import { leaveGame } from './helpers';
 import { MediaCheckScreen } from '../screens/MediaCheckScreen';
@@ -9,7 +10,7 @@ import type { Maze, MazeKind, Position } from '../data/maze';
 import { ARABIC_WORD_CARDS } from '../data/arabicWords';
 import { ARABIC_NUMBER_NAMES, HIJAIYAH } from '../data/scripts';
 import { COUNTING_SETS } from '../data/curriculum';
-import { LETTER_NAMES_EN } from '../hooks/useAudio';
+import { LETTER_NAMES_EN } from '../audio/words';
 import {
   installVoice,
   playedClips,
@@ -45,7 +46,7 @@ describe('Arabic letters and numerals', () => {
   describe('the toggle', () => {
     it('is on Mengenal Huruf, Belajar Bicara, Berhitung and the maze\'s choosing screen', async () => {
       for (const card of [/Mengenal Huruf/, /Belajar Bicara/, /Berhitung/, /Labirin/]) {
-        const user = userEvent.setup();
+        const user = setupUser();
         const { unmount } = render(<App />);
         await openCard(user, card);
 
@@ -58,7 +59,7 @@ describe('Arabic letters and numerals', () => {
       // Rupiah is written with Western digits, so a switch there would do
       // nothing sensible.
       for (const card of [/Kasir/]) {
-        const user = userEvent.setup();
+        const user = setupUser();
         const { unmount } = render(<App />);
         expect(screen.queryByRole('radiogroup', TOGGLE)).not.toBeInTheDocument();
         await openCard(user, card);
@@ -69,7 +70,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('starts on Latin', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
       await openCard(user, /Mengenal Huruf/);
 
@@ -78,7 +79,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('is remembered, so a parent sets it once', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const first = render(<App />);
       await openCard(user, /Mengenal Huruf/);
       await setScript(user, 'Arab');
@@ -92,7 +93,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('can be switched back, and that is remembered too', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
       await setScript(user, 'Latin');
 
@@ -100,7 +101,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('is one setting for the whole app: switch it in one module and the others follow', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
       await openCard(user, /Mengenal Huruf/);
       await setScript(user, 'Arab');
@@ -117,7 +118,7 @@ describe('Arabic letters and numerals', () => {
         throw new Error('blocked');
       };
       try {
-        const user = userEvent.setup();
+        const user = setupUser();
         render(<App />);
         await openCard(user, /Mengenal Huruf/);
         await setScript(user, 'Arab');
@@ -131,7 +132,7 @@ describe('Arabic letters and numerals', () => {
 
   describe('Mengenal Huruf', () => {
     it('shows the 28 hijaiyah, starting with alif', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
 
       expect(screen.getByText('Huruf 1 dari 28 — ketuk hurufnya')).toBeInTheDocument();
@@ -142,14 +143,14 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('names the letter in Latin script underneath, for the grown-up', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
 
       expect(screen.getByText('Alif')).toBeInTheDocument();
     });
 
     it('says the letter\'s name when it is tapped', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
 
       await user.click(screen.getByRole('button', { name: /Dengarkan huruf ا/ }));
@@ -157,7 +158,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('steps through all 28 with the arrow keys and wraps at both ends', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
 
       await user.keyboard('{ArrowRight}');
@@ -174,7 +175,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('can say every one of the 28', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
 
       for (const letter of HIJAIYAH) {
@@ -186,14 +187,14 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('hides the Indonesian/English choice, which does not apply to Arabic names', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
 
       expect(screen.queryByRole('radiogroup', { name: 'Bahasa pengucapan huruf' })).not.toBeInTheDocument();
     });
 
     it('brings the Indonesian/English choice back in Latin', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
       await setScript(user, 'Latin');
 
@@ -201,7 +202,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('starts again from the first letter when the script changes', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
       await openCard(user, /Mengenal Huruf/);
       await user.keyboard('{ArrowRight}{ArrowRight}{ArrowRight}'); // D
@@ -219,7 +220,7 @@ describe('Arabic letters and numerals', () => {
 
     it('speaks the Arabic name the same whatever the Latin-letter language is set to', async () => {
       window.localStorage.setItem('belajar-yuk:letter-lang', 'en');
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
 
       spokenUtterances.length = 0;
@@ -231,7 +232,7 @@ describe('Arabic letters and numerals', () => {
 
     it('plays a recording of the name when one has been supplied', async () => {
       setMediaManifest({ audio: ['letters/ar/alif.mp3'], images: [] });
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
 
       await user.click(screen.getByRole('button', { name: /Dengarkan huruf ا/ }));
@@ -241,7 +242,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('leaves the Latin alphabet exactly as it was', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
       await openCard(user, /Mengenal Huruf/);
 
@@ -255,7 +256,7 @@ describe('Arabic letters and numerals', () => {
       new RegExp(`^Hitung ${COUNTING_SETS[(round - 1) % COUNTING_SETS.length].label}$`);
 
     it('writes the answer and the tally in Arabic numerals', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Berhitung/);
 
       await user.click(screen.getByRole('button', { name: objectName(1) }));
@@ -265,7 +266,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('says the number in Arabic, and keeps the instruction in Indonesian', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Berhitung/);
 
       expect(spokenTexts).toContain('Ayo hitung!');
@@ -275,7 +276,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('stamps each counted object with its Arabic numeral and says each in turn', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Berhitung/);
       await user.click(screen.getByRole('button', { name: objectName(1) }));
       await user.click(screen.getByRole('button', { name: 'Lanjut ke angka 2' }));
@@ -292,7 +293,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('says all ten in Arabic', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Berhitung/);
 
       for (let n = 1; n <= 10; n += 1) {
@@ -306,7 +307,7 @@ describe('Arabic letters and numerals', () => {
     }, 30000);
 
     it('puts the Arabic numeral on the celebration', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Berhitung/);
       await user.click(screen.getByRole('button', { name: objectName(1) }));
 
@@ -314,7 +315,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('is unchanged in Latin', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
       await openCard(user, /Berhitung/);
       await user.click(screen.getByRole('button', { name: objectName(1) }));
@@ -336,7 +337,7 @@ describe('Arabic letters and numerals', () => {
     }
 
     it('lines a letter maze with hijaiyah', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Huruf');
 
       expect(screen.getByText('Ketuk ا untuk mulai')).toBeInTheDocument();
@@ -347,7 +348,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('lines a number maze with Arabic numerals', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind } = await enter(user, 'Angka');
 
       expect(tile(kind, '١')).toHaveAccessibleName('Angka ١, ketuk untuk mulai');
@@ -355,7 +356,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('puts only Arabic on every tile, dead ends included - never a mixture', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await enter(user, 'Huruf');
 
       for (const t of screen.getAllByRole('button', { name: /^Huruf / })) {
@@ -365,7 +366,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('says the instruction with Arabic letter names', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await enter(user, 'Huruf');
 
       // alif, ba, ta, tsa: the first four hijaiyah.
@@ -373,14 +374,14 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('says the instruction with Arabic number names', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await enter(user, 'Angka');
 
       expect(spokenTexts).toContain("Ikuti angka dari wahid sampai arba'ah!");
     });
 
     it('speaks each tile by its Arabic name as the animal steps on it', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Huruf');
       await user.click(tile(kind, labelAt(maze, maze.route[0])));
 
@@ -390,7 +391,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('can be played from the first tile to the treat, with the cheer', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
 
       for (let i = 0; i < maze.route.length; i += 1) {
@@ -402,7 +403,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('names what to look for in Arabic after a wrong tap', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       // Level 2 (letters) has a dead end beside its very first tile.
       await openIn(user, /Labirin/);
       await choose(user, 'Huruf');
@@ -428,7 +429,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('can change the script on the choosing screen, before a maze begins', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
       await openCard(user, /Labirin/);
       await setScript(user, 'Arab');
@@ -438,7 +439,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('is unchanged in Latin', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
       await openCard(user, /Labirin/);
       await choose(user, 'Huruf');
@@ -453,7 +454,7 @@ describe('Arabic letters and numerals', () => {
     const next = (user: User) => user.click(screen.getByRole('button', { name: 'Kata berikutnya' }));
 
     it('opens on the first Arabic card: the letter, a picture and the word', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Belajar Bicara/);
 
       expect(screen.getByRole('button', { name: /^Dengarkan kata أَرْنَب \(Kelinci\)/ })).toBeInTheDocument();
@@ -464,7 +465,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('goes through all 28 cards, each word with its own letter, and round again', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Belajar Bicara/);
 
       for (let n = 0; n < ARABIC_WORD_CARDS.length; n += 1) {
@@ -483,7 +484,7 @@ describe('Arabic letters and numerals', () => {
 
     it('says the word in Arabic when the device has an Arabic voice, and the letter in Arabic too', async () => {
       installVoice('Test Arabic', 'ar-SA');
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Belajar Bicara/);
       spokenUtterances.length = 0;
 
@@ -494,7 +495,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('says the Indonesian spelling when it has none', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Belajar Bicara/);
       spokenUtterances.length = 0;
 
@@ -505,7 +506,7 @@ describe('Arabic letters and numerals', () => {
 
     it('uses a recording of the word when there is one', async () => {
       setMediaManifest({ audio: ['words/ar/alif.mp3'], images: [] });
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Belajar Bicara/);
       spokenUtterances.length = 0;
 
@@ -517,14 +518,14 @@ describe('Arabic letters and numerals', () => {
 
     it('uses your own picture when there is one, instead of the drawing', async () => {
       setMediaManifest({ audio: [], images: ['words/ar/alif.png'] });
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Belajar Bicara/);
 
       expect(document.querySelector('img[src="media/images/words/ar/alif.png"]')).not.toBeNull();
     });
 
     it('shows a drawing for every card, including the four with no lucide icon', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Belajar Bicara/);
 
       for (let n = 0; n < ARABIC_WORD_CARDS.length; n += 1) {
@@ -535,7 +536,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('starts over when the script is switched, and Latin keeps its own cards', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Belajar Bicara/);
       await next(user);
       await next(user);
@@ -548,7 +549,7 @@ describe('Arabic letters and numerals', () => {
     });
 
     it('counts different Arabic cards towards leaving, like the Latin ones', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Belajar Bicara/);
 
       for (let i = 0; i < 5; i += 1) {
@@ -561,7 +562,7 @@ describe('Arabic letters and numerals', () => {
 
   describe('what is deliberately left alone', () => {
     it('Kasir keeps writing Rupiah with Western digits', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Kasir/);
 
       const customer = screen.getByRole('region', { name: 'Pembeli' });
@@ -608,7 +609,7 @@ describe('a native Arabic voice', () => {
     });
 
     it('says a letter\'s name in Arabic, not in Indonesian spelling', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
       spokenTexts.length = 0;
       spokenUtterances.length = 0;
@@ -619,7 +620,7 @@ describe('a native Arabic voice', () => {
     });
 
     it('says every hijaiyah letter in Arabic script, by the Arabic voice', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
 
       for (let i = 0; i < HIJAIYAH.length; i += 1) {
@@ -634,7 +635,7 @@ describe('a native Arabic voice', () => {
     });
 
     it('says the counting numbers in Arabic, and the instruction in Indonesian', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Berhitung/);
       spokenUtterances.length = 0;
 
@@ -645,7 +646,7 @@ describe('a native Arabic voice', () => {
     });
 
     it('speaks the maze instruction with the Arabic names in an Arabic voice and the rest in Indonesian', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Labirin/);
       spokenUtterances.length = 0;
       await user.click(screen.getByRole('button', { name: 'Huruf' }));
@@ -661,7 +662,7 @@ describe('a native Arabic voice', () => {
 
     it('still uses a recording where there is one', async () => {
       setMediaManifest({ audio: ['letters/ar/alif.mp3'], images: [] });
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
       spokenUtterances.length = 0;
 
@@ -672,7 +673,7 @@ describe('a native Arabic voice', () => {
     });
 
     it('leaves Latin letters, and Indonesian words, to the Indonesian voice', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/, 'latin');
       spokenUtterances.length = 0;
 
@@ -686,7 +687,7 @@ describe('a native Arabic voice', () => {
     beforeEach(() => installVoice('Test Indonesian', 'id-ID'));
 
     it('falls back to the Indonesian spelling, which that voice reads properly', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
       spokenUtterances.length = 0;
 
@@ -696,7 +697,7 @@ describe('a native Arabic voice', () => {
     });
 
     it('never sends Arabic script to an Indonesian voice', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openIn(user, /Mengenal Huruf/);
       for (let i = 0; i < 5; i += 1) {
         await user.click(screen.getByRole('button', { name: /^Dengarkan huruf/ }));

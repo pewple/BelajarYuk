@@ -1,10 +1,18 @@
 # Belajar Yuk!
 
 Aplikasi belajar interaktif berbahasa Indonesia untuk balita usia ±3 tahun.
-Enam permainan: **Mengenal Huruf**, **Belajar Bicara**, **Berhitung 1–10**,
-**Pola** (melanjutkan barisan bentuk berwarna), **Labirin** (mengikuti urutan huruf
-atau angka sampai ke tujuan), dan **Kasir** (menghitung uang kembalian selangkah demi
-selangkah). Huruf dan angka bisa ditulis Latin atau Arab (hijaiyah).
+Delapan permainan: **Mengenal Huruf**, **Belajar Bicara**, **Berhitung 1–10**,
+**Menulis** (menelusuri huruf dan angka dengan jari), **Pola** (melanjutkan barisan
+bentuk berwarna), **Memori** (mencari pasangan kartu), **Labirin** (mengikuti urutan
+huruf atau angka sampai ke tujuan), dan **Kasir** (menghitung uang kembalian selangkah
+demi selangkah). Huruf dan angka bisa ditulis Latin atau Arab (hijaiyah).
+
+Nomor versi (`v1.1.0`, dari `package.json`) tampil kecil di pojok kanan atas setiap
+halaman. Di bawah layar utama ada catatan singkat untuk orang tua: aplikasi bisa dipasang
+dan dibuka tanpa internet, berjalan hanya di perangkat ini, **tanpa cookie**, tanpa akun,
+tanpa pelacak, dan tidak mengirim data ke mana pun (pengaturan dan catatan belajar disimpan
+di penyimpanan lokal perangkat). Bagian "bisa dipasang" disembunyikan bila aplikasi sudah
+terpasang atau dibuka dari folder (`file://`).
 
 Tidak butuh file audio — semua suara bawaan dihasilkan saat aplikasi berjalan
 (Web Speech API untuk pengucapan, Web Audio API untuk efek suara). Suara dan
@@ -112,14 +120,27 @@ React 19 · TypeScript · Vite · Tailwind CSS v4 · lucide-react · Vitest + Re
 
 ```
 src/
-  hooks/useAudio.ts        Web Speech (id-ID / en-US) + efek suara Web Audio
+  audio/words.ts           Nama huruf, kata bilangan, pujian (teks saja)
+  audio/respell.ts         Ejaan fonetik untuk suara Inggris (bila tak ada suara Indonesia)
+  audio/voice.ts           Antrean suara: rekaman + Web Speech, suara asli bahasa Arab
+  audio/effects.ts         Efek suara (pop, lonceng, koin, ...) lewat Web Audio
+  hooks/useAudio.ts        Hanya menyambungkan modul audio ke React dan suara terpasang
+  hooks/useInstruction.ts  Perintah lisan sekali + pengingat sekali; useKnowsTheDrill
+  hooks/useFlash.ts        Nilai yang kembali sendiri (sorotan, goyang)
   hooks/useArrowKeys.ts    Navigasi papan ketik untuk kartu
   data/curriculum.ts       Huruf A-Z, kartu kata A-Z, set objek berhitung, tema warna
   data/navigation.ts       Pilihan di layar utama
   data/pola.ts             Bentuk, tingkat pola, dan cara membuat satu ronde
+  data/memori.ts           Aturan Memori: memilih pasangan, mengocok, membalik kartu
+  data/tracing.ts          Garis huruf/angka (A-Z, 0-9) dan aturan mengikuti garis dengan jari
+  media/memoriVoice.ts     "Cari yang sama!", nama tiap kartu
+  media/menulisVoice.ts    "Ikuti garisnya!", "Pilih huruf atau angka!"
+  components/VersionBadge  Nomor versi di pojok kanan atas
+  components/AppNotice     Catatan PWA dan privasi di layar utama
   data/arabicWords.ts      Dek kata Arab (28 huruf, satu kata tiap huruf)
   components/drawnIcons.ts Gambar buatan untuk kata yang tak punya ikon lucide
   components/PolaToken.tsx Bentuk berwarna (lingkaran merah, kotak biru, ...)
+  components/PolaBox.tsx   Kotak berisi 2-4 bentuk (ditumpuk, atau persegi 2 x 2)
   media/polaVoice.ts       "Lanjutkan polanya!", nama warna, barisan dibacakan
   src/pwa.ts               Mendaftarkan service worker
   data/money.ts            Pembeli, pecahan uang, "seribu"/"dua belas ribu", hitung maju
@@ -140,13 +161,28 @@ src/
   media/voiceParts.ts      Kalimat disusun dari potongan (rekaman bila ada, kalau tidak suara mesin)
   media/moneyVoice.ts      Kalimat kasir
   media/mazeVoice.ts       Kalimat labirin
-  components/              ScreenFrame, StepButton, PulseRing, LangToggle, CardArt, MoneyPiece, Celebration
-  screens/                 Home, Alphabet, Pronunciation, Counting, Pola, Labirin, Kasir, MediaCheck (#media)
+  components/              ScreenFrame, StepButton, PulseRing, LangToggle, CardArt, MoneyPiece, Celebration,
+                           ModeChooser (layar pilihan), RoundButtons (Lanjut, tombol ikon)
+  screens/                 Home, Alphabet, Pronunciation, Counting, Menulis, Pola, Memori, Labirin, Kasir, MediaCheck (#media)
   test/                    Setup jsdom + tes integrasi
 public/media/              Suara dan gambar sendiri (audio/, images/, manifest.js)
 packaging/                 Berkas untuk pengguna akhir: Perbarui-Media.bat/.ps1, BACA-SAYA.txt
 scripts/                   media-manifest.mjs, package.mjs
 ```
+
+## Pengujian
+
+`npm test` menjalankan semua tes (±1.350) dalam sekitar 20 detik di komputer 16 inti; Netlify
+menjalankannya sebelum setiap build. Beberapa hal yang membuatnya cepat, supaya tidak
+terhapus tanpa sengaja:
+
+- `src/test/user.ts` — `setupUser()` dipakai semua tes, bukan `userEvent.setup()` langsung.
+  `click`-nya hanya satu peristiwa klik (yang memang dipakai aplikasi); user-event penuh
+  menjalankan gerak mouse, fokus, dan sebagainya, 2–3 kali lebih lambat. Selain klik tetap user-event.
+- `src/test/setup.ts` mematikan penangkapan *stack trace* tiap elemen oleh React versi pengembangan
+  (separuh biaya tiap render di tes, dan tak dibaca siapa pun).
+- Tes yang menunggu waktu nyata (mis. hitungan Kasir yang mengosong sendiri) memakai *fake timers*.
+- Satu permainan penuh dimainkan sekali per jenis, bukan di beberapa tes yang sama.
 
 ## Dasar pedagogis
 
@@ -226,9 +262,26 @@ pembeli yang sama. Tidak ada hukuman yang menumpuk. Setiap langkah ditulis seper
 struk (`1.000 + 500 = 1.500`), dan saat benar "ka-ching" berbunyi serta hitungannya
 ditulis lengkap: `5.000 − 3.500 = 1.500`.
 
+**Batas pemakaian tiap pecahan.** Untuk satu pembeli, Rp 500 hanya boleh dipakai **paling
+banyak 3 kali**, Rp 1.000 empat kali, Rp 2.000 tiga kali, dan Rp 5.000 dua kali
+(`PIECE_LIMITS` di `data/money.ts`). Tanpa batas, anak bisa mencapai jumlah apa pun dengan
+mengetuk Rp 500 berulang-ulang — menghitung per setengah ribu, bukan memilih uang yang
+tepat — dan Rp 8.000 jadi enam belas ketukan. Pecahan kecil dibatasi paling ketat, jadi jalan
+keluarnya memakai pecahan yang lebih besar. Sisa pemakaian tampak sebagai **titik-titik** di
+bawah tiap uang (satu titik per kali yang masih boleh, mengosong saat dipakai); uang yang
+sudah habis dimatikan tetapi tetap di tempatnya (keempat uang tak pernah berpindah). Batas
+itu juga terbaca oleh pembaca layar ("Masih bisa 2 kali"). Setiap pembeli tetap bisa dilayani
+tepat dalam batas itu (ada tes yang memeriksanya).
+
+Karena pecahan kecil bisa habis, ada satu jalan buntu baru, dan ia ditangani dengan aturan
+lama: begitu jalan menuju kembalian yang tepat tertutup — mis. tiga kali Rp 500 untuk
+Rp 3.000, sisa Rp 1.500 tak bisa dibuat tanpa Rp 500 — hitungannya dijawab **"Salah, hitung
+kembali"** seperti kelebihan, lalu dikosongkan dan titik-titik penuh lagi. Anak tidak pernah
+dibiarkan di baki yang tak mungkin benar. Petunjuk (sorotan) memilih uang terbesar yang
+masih muat *dan* masih bisa menuntaskan hitungan.
+
 Semua jumlah kelipatan Rp 500, sehingga setiap total terdengar bersih ("seribu lima
-ratus") dan pecahan Rp 500 selalu bisa menuntaskan hitungan — anak bisa kelebihan,
-tapi tidak pernah buntu. Beberapa harga berakhiran 500 supaya pecahan itu benar-benar
+ratus"). Anak bisa kelebihan, tapi ia selalu diberi tahu sebelum buntu. Beberapa harga berakhiran 500 supaya pecahan itu benar-benar
 terpakai. Warna uang mengikuti uang kertas Rupiah asli. Ini jauh lebih sulit
 daripada tiga permainan lainnya: cocok untuk anak yang sudah bisa berhitung sampai
 10, bukan untuk usia 3 tahun yang baru mulai.
@@ -271,16 +324,35 @@ dengan papan angka; jawabannya dua angka, jadi menekan asal hampir tak pernah lo
 Salah, kosong, atau ketuk "Kembali bermain" = langsung kembali ke permainan, tanpa
 hukuman. Benar = pulang. Setelah **5 permainan selesai di modul itu** tombol berubah
 normal dan tak lagi digembok. Satu "permainan" = satu ronde Berhitung selesai, satu
-labirin selesai, satu pembeli dilayani, atau (di Mengenal Huruf dan Belajar Bicara) satu
-kartu *berbeda* yang didengar. Hitungannya dimulai ulang setiap pindah modul. Soalnya
-sunyi (tidak dibacakan), dan tombol panah/spasi di belakangnya tidak ikut menggerakkan
-permainan.
+labirin selesai, satu pembeli dilayani, satu pola, satu pasangan kartu Memori selesai, satu huruf
+Menulis selesai, atau (di Mengenal Huruf dan Belajar Bicara) satu kartu *berbeda* yang
+didengar. Hitungannya dimulai ulang setiap pindah modul. Soalnya sunyi (tidak dibacakan), dan
+tombol panah/spasi di belakangnya tidak ikut menggerakkan permainan.
+
+**Dibuka lebih awal untuk anak yang kesulitan.** Bila anak **salah 3 kali berturut-turut**
+di modul itu, tombol rumah langsung dilepas (tanpa soal) selama sisa kunjungan itu: anak
+yang sudah tiga kali salah bukan sedang ceroboh melainkan buntu, dan yang paling mungkin ia
+inginkan adalah keluar. Satu jawaban benar di antaranya memulai hitungan dari nol; sekali
+tercapai, pembukaan itu tetap sampai ia pindah modul. Yang dihitung adalah keputusan yang
+bisa salah: pilihan di persimpangan Labirin, pilihan di Pola, pasangan yang tak cocok di
+Memori, goresan yang melenceng di Menulis, dan di Kasir **satu hitungan utuh** (bukan tiap
+uang di tengah jalan): hitungan salah dua kali lalu benar, lalu salah lagi, baru dihitung 1.
+Berhitung, Mengenal Huruf, dan Belajar Bicara tidak punya jawaban salah, jadi tidak pernah
+membukanya dengan cara ini.
 
 **Istirahat setelah 15 menit.** Layar bulan yang lembut: "Sudah dulu ya! Sampai jumpa!"
-(diucapkan), satu tombol besar "Selesai" ke menu — tanpa "main lagi", tanpa hitung mundur.
-Hanya waktu saat halaman benar-benar terlihat yang dihitung. Layar ini menunggu jeda
+(diucapkan) dengan satu tombol besar "Selesai" ke menu — tanpa "main lagi", tanpa hitung
+mundur. Hanya waktu saat halaman benar-benar terlihat yang dihitung. Layar ini menunggu jeda
 alami (satu permainan selesai, atau tiba di menu); kalau tidak ada jeda dalam 45 detik,
-muncul juga. Ini *dorongan*, bukan kunci: setelah ditutup, 15 menit berikutnya dimulai.
+muncul juga.
+
+Ini *dorongan*, bukan kunci: **hanya tombol rumah yang mengakhiri permainan.** Mengetuk di
+mana saja selain tombol itu, atau menekan tombol papan ketik apa pun, menyingkirkan layar
+istirahat dan permainan lanjut persis di tempat semula (tombol panah/spasi pertama hanya
+menutup layar, tidak ikut menggerakkan permainan). Hanya Tab dan tombol pengubah (Shift,
+Ctrl, Alt) yang diabaikan, supaya pengguna papan ketik masih bisa berpindah fokus; Enter/spasi
+pada tombol "Selesai" itu sendiri berarti tombol itu ditekan. Ucapan perpisahan berhenti, dan
+15 menit berikutnya dimulai dari awal.
 
 **Petunjuk yang memudar.** Di Labirin dan Kasir, anak yang baru mulai mendapat petunjuk
 terus-menerus: kotak berikutnya di labirin menyala; di Kasir, uang terbesar yang masih
@@ -319,10 +391,23 @@ teks diperiksa ≥ 4,5:1 (3:1 untuk teks besar), `prefers-reduced-motion` dihorm
 setiap kontrol punya nama untuk pembaca layar, dan dialog (gerbang, istirahat) bersifat
 modal dengan fokus pindah ke dalamnya.
 
-**Pola: melanjutkan barisan.** Satu baris bentuk berulang ("merah, biru, merah, biru") dan
-satu tempat kosong bertanda "?". Anak memilih bentuk berikutnya dari baki yang tidak
-berpindah. Tingkatnya: dua warna berulang (AB), yang digandakan (AAB, ABB), lalu tiga
-warna (ABC), masing-masing dengan beberapa kombinasi warna. Baris selalu menampilkan
+**Pola: melanjutkan barisan.** Seperti Labirin, ada layar pilihan dulu — **Baris**, **Kotak**,
+atau **Acak** (Acak = tiap ronde dilempar koin: baris atau kotak; pilihannya tidak diingat).
+Lalu satu baris berulang dan satu tempat kosong bertanda "?". Anak memilih yang berikutnya
+dari baki yang tidak berpindah.
+
+- **Baris:** barisan *bentuk* ("merah, biru, merah, biru"). Tingkatnya: dua warna berulang
+  (AB), yang digandakan (AAB, ABB), lalu tiga warna (ABC), masing-masing dengan beberapa
+  kombinasi warna.
+- **Kotak:** barisan *kotak*, tiap kotak berisi **dua sampai empat bentuk**: dua atau tiga
+  ditumpuk satu di atas yang lain, empat membentuk persegi 2 × 2. Yang berulang adalah seluruh
+  kotak (AB), dan kedua kotak berisi bentuk yang sama dengan susunan terbalik — jadi tahu
+  warnanya saja tidak cukup, anak harus melihat letaknya. Tingkatnya: 2 bentuk (dua pasang
+  warna), 3 bentuk (dua), lalu 4 bentuk (dua). Dibacakan per kotak dari atas ke bawah:
+  "merah biru, biru merah, merah biru!". Kotak sengaja hanya AB agar lima kotak muat
+  sebaris di layar ponsel.
+- **Acak:** tiap kelompok mengikuti urutan tingkatnya sendiri (baris naik sendiri, kotak
+  naik sendiri); jenis yang belum pernah muncul mulai dari tingkat pertamanya. Setiap baris menampilkan
 **dua kali ulangan penuh**, sehingga hanya ada satu cara melanjutkannya; titik awal baris
 berubah menurut ronde, jadi jawabannya tidak selalu "yang pertama".
 
@@ -335,6 +420,48 @@ bukan satu kata saja. Semua pengaman di atas berlaku di sini juga: gerbang tombo
 petunjuk yang memudar (3 benar → lepas, 2 salah → kembali), kunci ketukan ganda, perintah
 lisan sekali + ulang, dan ulangan berjarak (tingkat yang salah muncul lagi tiap ronde
 ketiga). Warna bisa direkam di `colors/merah.mp3` dan seterusnya.
+
+**Menulis: menelusuri huruf dan angka.** Pertama dipilih **Huruf** atau **Angka**. Lalu satu
+per satu: papan putih dengan garis abu-abu sebagai pemandu, **titik kuning** tempat mulai
+(bernomor bila hurufnya punya beberapa goresan), dan tinta berwarna yang mengikuti jari
+selama jari tetap di garis. Goresan mengikuti urutan dan arah yang diajarkan di sekolah:
+atas ke bawah, kiri ke kanan, bentuk bulat berlawanan arah jarum jam dari atas. Huruf A–Z
+dan angka 1–9 lalu 0.
+
+Aturannya sengaja sangat longgar (`data/tracing.ts`): koridor 13 satuan dari garis (papan
+100 × 100), jadi jari kecil yang goyang tetap menggambar. Jari yang keluar garis cuma
+berhenti menggambar — tinta tidak hilang, dan kembali ke ujung tinta melanjutkannya. Hanya
+bila jauh sekali (26 satuan) terdengar bunyi lembut dan titik "ikuti aku" muncul, sekali per
+penyimpangan. Menyentuh papan di tempat lain tidak menggambar apa-apa; melompat jauh di
+sepanjang garis atau memotong bentuk bulat tidak bisa menyelesaikannya lebih cepat (jangkauan
+ke depan dibatasi). Menyentuh huruf mengucapkan namanya; selesai mengucapkannya dengan
+sorakan lalu pujian. Tombol mata (**Tunjukkan caranya**) memutar titik pemandu kapan saja;
+**Lanjut** selalu ada (di papan ketik tidak ada cara menelusuri, jadi itu jalan keluarnya).
+
+Petunjuk memudar seperti permainan lain: anak baru melihat titik biru yang berjalan di
+depan jarinya sepanjang goresan; setelah **3 goresan bersih berturut-turut** titik itu hilang
+(kecuali diminta), dan setelah **2 goresan yang melenceng** muncul lagi. Huruf yang goresannya
+melenceng dicatat di ulangan berjarak dan muncul lagi tiap huruf ketiga. Titik pemandu tidak
+bergerak sendiri bila perangkat memilih "kurangi gerak". Tombol ABC/ابت tidak ada di sini:
+yang digambar selalu huruf Latin dan angka biasa.
+
+*Belum ada:* menelusuri huruf hijaiyah dan angka ١–٩. Bentuknya bersambung, bertitik, dan
+urutan goresannya punya aturan sendiri; garisnya sebaiknya dibuat atau diperiksa oleh orang
+yang menulis Arab, bukan ditebak.
+
+**Memori: mencari pasangan.** Kartu tertelungkup. Anak membalik satu, lalu satu lagi:
+pasangan tetap terbuka (hijau, dengan tanda "sudah cocok"); yang tidak cocok tetap terlihat
+1,8 detik lalu menutup lagi — selama itu kartu lain tidak bisa dibalik. Posisi kartu tidak
+pernah berpindah dalam satu ronde. Setiap kartu yang dibalik mengucapkan namanya ("Apel",
+"a"). Tingkatnya: 4, 6, lalu 8 kartu dengan **gambar yang sama**, kemudian **huruf dengan
+gambar yang berawalan huruf itu** (A dan apel — hubungan yang diajarkan Belajar Bicara; di
+mode Arab: huruf hijaiyah dan kartu katanya).
+
+Anak baru mendapat dua bantuan: semua kartu **dibuka sebentar** (±4–5 detik) sebelum
+ditutup, dan setelah salah tebak **pasangan yang dicari menyala**. Keduanya hilang setelah
+3 tebakan benar berturut-turut dan kembali setelah 2 salah. Pasangan yang pernah salah
+dicatat (ulangan berjarak) dan dimasukkan lebih dulu ke ronde berikutnya. Tombol *Kocok
+ulang* mengocok lagi ronde yang sama.
 
 **Penguatan positif.** Penyelesaian memicu konfeti, arpeggio nada mayor, angka
 yang berubah dari "?" menjadi jumlahnya, dan pujian singkat yang dirotasi
@@ -393,7 +520,7 @@ Indonesia yang benar-benar tepat di perangkat tanpa voice `id-ID`.
      bergantung pada perangkat.
   2. **Pasang voice Indonesia.** Di Windows: Settings › Time & language ›
      Language & region › Bahasa Indonesia › Language options › Speech.
-  3. **Ejaan fonetik otomatis** (`EN_VOICE_RESPELL` di `hooks/useAudio.ts`).
+  3. **Ejaan fonetik otomatis** (`EN_VOICE_RESPELL` di `audio/respell.ts`).
      Kalau tidak ada voice Indonesia, aplikasi menyuapi suara Inggris ejaan
      seperti `buh-lah-jar yook` dan `sah-too`, bukan ejaan Indonesia mentah.
      Hasilnya perkiraan, bukan pengucapan baku — silakan disetel sendiri.

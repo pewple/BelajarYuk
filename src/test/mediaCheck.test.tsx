@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from './user';
 import App from '../App';
 import { MediaCheckScreen } from '../screens/MediaCheckScreen';
 import { buildSlots, slotIds } from '../media/slots';
@@ -62,7 +62,7 @@ describe('the customisable slots', () => {
 
 describe('media check page', () => {
   it('is reached by #media and has no link from the toddler UI', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(<App />);
 
     // Nothing on the home screen leads there.
@@ -112,7 +112,7 @@ describe('media check page', () => {
     expect(wordsAudio).toHaveTextContent(`2 / ${WORD_CARDS.length}`);
 
     const sentences = screen.getByText('Kalimat').closest('summary')!;
-    expect(sentences).toHaveTextContent('1 / 7');
+    expect(sentences).toHaveTextContent('1 / 9');
 
     const wordsImages = screen.getByText('Kartu kata di Belajar Bicara').closest('summary')!;
     expect(wordsImages).toHaveTextContent(`1 / ${WORD_CARDS.length}`);

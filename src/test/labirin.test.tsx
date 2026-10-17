@@ -1,17 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { setupUser } from './user';
 import App from '../App';
 import { leaveGame } from './helpers';
 import { MAZE_LEVELS, areNeighbours, buildMaze, cellAt, routeEnds, stepResult } from '../data/maze';
 import type { Maze, MazeKind, Position } from '../data/maze';
 import { ALPHABET } from '../data/curriculum';
-import {
-  LETTER_NAMES_EN,
-  LETTER_NAMES_ID,
-  NUMBER_WORDS_ID,
-  PRAISE_ID,
-} from '../hooks/useAudio';
+import { LETTER_NAMES_EN, LETTER_NAMES_ID, NUMBER_WORDS_ID, PRAISE_ID } from '../audio/words';
 import {
   installVoice,
   playedClips,
@@ -89,10 +85,10 @@ describe('Labirin', () => {
   beforeEach(() => installVoice('Test Indonesian', 'id-ID'));
 
   describe('on the home screen', () => {
-    it('sits after Pola and before Kasir', () => {
+    it('sits after Memori and before Kasir', () => {
       render(<App />);
 
-      const titles = ['Mengenal Huruf', 'Belajar Bicara', 'Berhitung', 'Pola', 'Labirin', 'Kasir'];
+      const titles = ['Mengenal Huruf', 'Belajar Bicara', 'Berhitung', 'Menulis', 'Pola', 'Memori', 'Labirin', 'Kasir'];
       const order = screen
         .getAllByRole('button')
         .map((button) => titles.find((title) => button.textContent?.includes(title)));
@@ -101,7 +97,7 @@ describe('Labirin', () => {
     });
 
     it('opens, and goes home again', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openLabirin(user);
 
       expect(screen.getByRole('heading', { name: 'Labirin' })).toBeInTheDocument();
@@ -112,7 +108,7 @@ describe('Labirin', () => {
 
   describe('choosing what the maze is lined with', () => {
     it('comes first: three choices, and no maze yet', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openLabirin(user);
 
       expect(screen.getByText('Pilih dulu, lalu mulai')).toBeInTheDocument();
@@ -123,14 +119,14 @@ describe('Labirin', () => {
     });
 
     it('is spoken, not just shown', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openLabirin(user);
 
       expect(spokenTexts).toContain('Pilih huruf, angka, atau acak!');
     });
 
     it('Huruf lines the maze with letters', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, level } = await enter(user, 'Huruf');
 
       const [first, last] = routeEnds(level, kind);
@@ -143,7 +139,7 @@ describe('Labirin', () => {
     });
 
     it('Angka lines the maze with numbers', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, level } = await enter(user, 'Angka');
 
       const [first, last] = routeEnds(level, kind);
@@ -154,7 +150,7 @@ describe('Labirin', () => {
     });
 
     it('puts only that kind on every tile, dead ends included', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await enter(user, 'Huruf');
 
       const tiles = screen.getAllByRole('button', { name: /^(Huruf|Angka) / });
@@ -163,7 +159,7 @@ describe('Labirin', () => {
     });
 
     it('keeps a fixed choice for every maze that follows', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await enter(user, 'Huruf');
       await finishLevel(user, 'letters', 0);
 
@@ -175,7 +171,7 @@ describe('Labirin', () => {
     });
 
     it('is not remembered: going home and back asks again', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await enter(user, 'Angka');
       await leaveGame(user);
       await user.click(screen.getByRole('button', { name: /Labirin/ }));
@@ -187,7 +183,7 @@ describe('Labirin', () => {
       afterEach(() => vi.restoreAllMocks());
 
       it('flips a coin for each maze: letters on a low roll, numbers on a high one', async () => {
-        const user = userEvent.setup();
+        const user = setupUser();
         await openLabirin(user);
 
         vi.spyOn(Math, 'random').mockReturnValueOnce(0.1);
@@ -207,7 +203,7 @@ describe('Labirin', () => {
       });
 
       it('can come up the same twice running - it is a coin, not a rota', async () => {
-        const user = userEvent.setup();
+        const user = setupUser();
         await openLabirin(user);
 
         vi.spyOn(Math, 'random').mockReturnValueOnce(0.9);
@@ -226,7 +222,7 @@ describe('Labirin', () => {
       });
 
       it('keeps the same kind while the same maze is replayed', async () => {
-        const user = userEvent.setup();
+        const user = setupUser();
         await openLabirin(user);
         vi.spyOn(Math, 'random').mockReturnValueOnce(0.1); // letters
         await choose(user, 'Acak');
@@ -244,7 +240,7 @@ describe('Labirin', () => {
 
   describe('before the first tap', () => {
     it('invites a tap on the first label', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, level } = await enter(user, 'Angka');
 
       const [first] = routeEnds(level, kind);
@@ -254,7 +250,7 @@ describe('Labirin', () => {
     });
 
     it('shows the first label itself, big, with the animal small in the corner', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind } = await enter(user, 'Angka');
 
       const first = tile(kind, '1');
@@ -267,7 +263,7 @@ describe('Labirin', () => {
     });
 
     it('does not centre or enlarge the animal anywhere on the board', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await enter(user, 'Angka');
 
       // Level 1's animal is the rabbit. (The carrot at the finish is a treat, not
@@ -279,7 +275,7 @@ describe('Labirin', () => {
     });
 
     it('does not mark the first step in the sequence strip as current yet', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await enter(user, 'Angka');
 
       const items = screen.getByRole('list', { name: 'Urutan' }).querySelectorAll('li');
@@ -287,7 +283,7 @@ describe('Labirin', () => {
     });
 
     it('does nothing for any other tile - the first one has to be tapped first', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
 
       spokenTexts.length = 0;
@@ -301,7 +297,7 @@ describe('Labirin', () => {
     });
 
     it('does not even nudge on a dead end - nothing has started to be wrong about', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
 
       // The dead end beside the very first tile, if the level has one.
@@ -314,7 +310,7 @@ describe('Labirin', () => {
     });
 
     it('points at nothing', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await enter(user, 'Angka');
 
       expect(document.querySelector('[data-hint]')).toBeNull();
@@ -323,7 +319,7 @@ describe('Labirin', () => {
 
   describe('the first tap', () => {
     it('starts the maze: the animal steps out, big and centred, and says what the tile is', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
 
       spokenTexts.length = 0;
@@ -339,7 +335,7 @@ describe('Labirin', () => {
     });
 
     it('changes the caption from "tap to start" to the instruction', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
 
@@ -348,7 +344,7 @@ describe('Labirin', () => {
     });
 
     it('lights the current step in the sequence strip', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
 
@@ -357,7 +353,7 @@ describe('Labirin', () => {
     });
 
     it('does nothing on a second tap of the same tile', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
 
@@ -370,7 +366,7 @@ describe('Labirin', () => {
     });
 
     it('is also what the first arrow key does - it starts the maze without moving', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
 
       await user.keyboard('{ArrowDown}');
@@ -381,7 +377,7 @@ describe('Labirin', () => {
     });
 
     it('is needed again after a reset', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
       await user.click(tile(kind, labelAt(maze, maze.route[1])));
@@ -393,7 +389,7 @@ describe('Labirin', () => {
     });
 
     it('is needed again for every new maze', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await enter(user, 'Angka');
       await finishLevel(user, 'numbers', 0);
 
@@ -404,7 +400,7 @@ describe('Labirin', () => {
 
   describe('moving along the route', () => {
     it('hops to the next tile, leaving a trail, and says its label', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
 
@@ -418,7 +414,7 @@ describe('Labirin', () => {
     });
 
     it('pops once per hop', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
 
@@ -429,7 +425,7 @@ describe('Labirin', () => {
     });
 
     it('ignores a tile that is not next, in silence', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
 
@@ -444,7 +440,7 @@ describe('Labirin', () => {
     });
 
     it('highlights the finished stretch in the sequence strip', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
       await user.click(tile(kind, '2'));
@@ -456,7 +452,7 @@ describe('Labirin', () => {
     });
 
     it('speaks letters by name, when the maze is lined with letters', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Huruf');
       await start(user, kind, maze);
 
@@ -477,7 +473,7 @@ describe('Labirin', () => {
     }
 
     it('nudges softly, says what to look for, and lights up the right tile', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, level, maze } = await openLevelTwo(user, 'Huruf');
       const { k, p } = deadEndBeside(maze);
 
@@ -501,7 +497,7 @@ describe('Labirin', () => {
     });
 
     it('asks for a number, not a letter, in a number maze', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, level, maze } = await openLevelTwo(user, 'Angka');
       const { k, p } = deadEndBeside(maze);
 
@@ -515,7 +511,7 @@ describe('Labirin', () => {
     });
 
     it('stops pointing once the child takes the right tile', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await openLevelTwo(user, 'Huruf');
       const { k, p } = deadEndBeside(maze);
 
@@ -529,7 +525,7 @@ describe('Labirin', () => {
     });
 
     it('can be tried again and again - there is no penalty to accumulate', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await openLevelTwo(user, 'Huruf');
       const { k, p } = deadEndBeside(maze);
 
@@ -544,7 +540,7 @@ describe('Labirin', () => {
 
   describe('reaching the treat', () => {
     it('celebrates: chime, cheer, praise and a way on', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, level, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
       await walk(user, kind, maze, 0, level.length - 2);
@@ -565,7 +561,7 @@ describe('Labirin', () => {
     });
 
     it('lets the animal stand on the treat', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, level, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
       await walk(user, kind, maze, 0, level.length - 1);
@@ -574,7 +570,7 @@ describe('Labirin', () => {
     });
 
     it('stops accepting taps once it is over', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, level, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
       await walk(user, kind, maze, 0, level.length - 1);
@@ -588,7 +584,7 @@ describe('Labirin', () => {
 
   describe('the levels', () => {
     it('move on with a new friend and their own instruction', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await enter(user, 'Huruf');
       await finishLevel(user, 'letters', 0);
 
@@ -602,17 +598,8 @@ describe('Labirin', () => {
       expect(tile('letters', last)).toHaveAccessibleName(/ada ikan/);
     });
 
-    it('go round again after the last one', async () => {
-      const user = userEvent.setup();
-      await enter(user, 'Angka');
-      for (let n = 0; n < MAZE_LEVELS.length; n += 1) await finishLevel(user, 'numbers', n);
-
-      expect(screen.getByText('Ketuk 1 untuk mulai')).toBeInTheDocument();
-      expect(spokenTexts.at(-1)).not.toBeUndefined();
-    });
-
     it.each(['Huruf', 'Angka'] as const)('can be played end to end, every one of them, as %s', async (choice) => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind } = await enter(user, choice);
 
       for (let n = 0; n < MAZE_LEVELS.length; n += 1) {
@@ -622,12 +609,16 @@ describe('Labirin', () => {
         expect(screen.getByTestId('celebration'), `level ${n + 1} did not finish`).toBeInTheDocument();
         await user.click(screen.getByRole('button', { name: 'Labirin berikutnya' }));
       }
+
+      // And after the last one it goes round again, to the first maze.
+      const [first] = routeEnds(MAZE_LEVELS[0], kind);
+      expect(screen.getByText(`Ketuk ${first} untuk mulai`)).toBeInTheDocument();
     }, 30000);
   });
 
   describe('starting over', () => {
     it('returns the animal to the start and says the instruction again', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
       await user.click(tile(kind, '2'));
@@ -640,7 +631,7 @@ describe('Labirin', () => {
     });
 
     it('is only offered once the animal has moved', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
 
       expect(screen.queryByRole('button', { name: 'Ulangi labirin' })).not.toBeInTheDocument();
@@ -653,7 +644,7 @@ describe('Labirin', () => {
 
   describe('the arrow keys', () => {
     it('walk the animal along the route, once the maze has started', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, level, maze } = await enter(user, 'Angka');
 
       await user.keyboard('{ArrowUp}'); // the first press starts it
@@ -666,7 +657,7 @@ describe('Labirin', () => {
     });
 
     it('do nothing at all against a wall or the edge of the board', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
       await start(user, kind, maze);
 
@@ -686,7 +677,7 @@ describe('Labirin', () => {
     });
 
     it('do nothing on the choosing screen', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openLabirin(user);
 
       playedToneCounts.value = 0;
@@ -700,7 +691,7 @@ describe('Labirin', () => {
   describe('letter names in English', () => {
     it('are spoken in English while the sentence around them stays Indonesian', async () => {
       window.localStorage.setItem('belajar-yuk:letter-lang', 'en');
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, level } = await enter(user, 'Huruf');
 
       const [first, last] = routeEnds(level, kind);
@@ -719,7 +710,7 @@ describe('Labirin', () => {
   describe('your own pictures', () => {
     it('replace the animal - small before the start, big after - and the treat', async () => {
       setMediaManifest({ audio: [], images: ['maze/kelinci.png', 'maze/wortel.png'] });
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind, maze } = await enter(user, 'Angka');
 
       const first = tile(kind, '1');
@@ -732,7 +723,7 @@ describe('Labirin', () => {
     });
 
     it('keep the built-in icons for anything without one', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const { kind } = await enter(user, 'Angka');
 
       expect(tile(kind, '1').querySelector('img')).toBeNull();
@@ -746,7 +737,7 @@ describe('Labirin', () => {
         audio: ['maze/pilih.mp3', 'maze/huruf.mp3', 'maze/angka.mp3', 'maze/atau.mp3', 'maze/acak.mp3'],
         images: [],
       });
-      const user = userEvent.setup();
+      const user = setupUser();
       await openLabirin(user);
 
       await waitFor(() => expect(playedClips).toHaveLength(5));
@@ -762,7 +753,7 @@ describe('Labirin', () => {
 
     it('stand in for the fixed words of a sentence and leave the rest spoken', async () => {
       setMediaManifest({ audio: ['maze/ikuti-angka.mp3', 'maze/sampai.mp3'], images: [] });
-      const user = userEvent.setup();
+      const user = setupUser();
       await enter(user, 'Angka');
 
       // Both fixed words are recorded, so only the two numbers are left to the
@@ -782,7 +773,7 @@ describe('Labirin finish tile', () => {
     [...button.querySelectorAll('svg')].map((svg) => svg.getAttribute('class') ?? '');
 
   it('shows its label as the big thing, with the treat small in the corner - like the start tile', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const { kind, level } = await enter(user, 'Huruf');
     const [, last] = routeEnds(level, kind);
 
@@ -795,7 +786,7 @@ describe('Labirin finish tile', () => {
   });
 
   it('keeps that after the maze has started, until the animal arrives', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const { kind, level, maze } = await enter(user, 'Angka');
     const [, last] = routeEnds(level, kind);
     await start(user, kind, maze);
@@ -807,7 +798,7 @@ describe('Labirin finish tile', () => {
   });
 
   it('shows the animal big when it arrives, with the treat small beside it', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const { kind, level, maze } = await enter(user, 'Huruf');
     const [, last] = routeEnds(level, kind);
     await start(user, kind, maze);

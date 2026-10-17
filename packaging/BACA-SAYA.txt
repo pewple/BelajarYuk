@@ -70,6 +70,12 @@ boleh dicicil satu per satu, dalam urutan apa saja.
                                  qof = قَمَر, kaf = كِتَاب, lam = لَيْمُون, mim = مَاء,
                                  nun = نَجْم, ha-2 = هَدِيَّة, wau = وَرْد, ya = يَد
   colors\merah.mp3               Pola: nama warna - merah, biru, kuning, hijau
+  pola\baris.mp3, pola\kotak.mp3 Pola: dua pilihan jenis ("baris", "kotak"). "Pilih",
+                                 "atau", "acak" memakai maze\pilih, maze\atau, maze\acak
+  phrases\cari-yang-sama.mp3     "Cari yang sama!" saat ronde Memori dimulai
+  phrases\ikuti-garis.mp3        "Ikuti garisnya!" saat huruf/angka di Menulis muncul
+                                 (kata "Pilih huruf atau angka!" di Menulis memakai rekaman
+                                 maze\pilih, maze\huruf, maze\atau, maze\angka)
   phrases\lanjutkan-pola.mp3     "Lanjutkan polanya!" saat ronde Pola dimulai
   phrases\coba-lagi.mp3          "Coba lagi!" setelah salah pilih di Pola
   numbers\1.mp3 ... 10.mp3       Angka di Berhitung  (satu ... sepuluh)

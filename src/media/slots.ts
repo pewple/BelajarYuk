@@ -5,13 +5,7 @@ import { HOME_CHOICES } from '../data/navigation';
 import { TOKENS } from '../data/pola';
 import { ARABIC_WORD_CARDS, arabicWordPictureId } from '../data/arabicWords';
 import { ARABIC_NUMBER_NAMES, HIJAIYAH, toArabicNumerals } from '../data/scripts';
-import {
-  COUNT_PROMPT_ID,
-  GREETING_ID,
-  LETTER_NAMES_EN,
-  LETTER_NAMES_ID,
-  numberWordId,
-} from '../hooks/useAudio';
+import { COUNT_PROMPT_ID, GREETING_ID, LETTER_NAMES_EN, LETTER_NAMES_ID, numberWordId } from '../audio/words';
 import {
   CLIP_IDS,
   MAZE_CLIP_IDS,
@@ -19,6 +13,7 @@ import {
   arabicLetterClipId,
   arabicNumberClipId,
   arabicWordClipId,
+  POLA_CLIP_IDS,
   colorClipId,
   letterClipId,
   moneyClipId,
@@ -130,8 +125,17 @@ export function buildSlots(): SlotCatalogue {
           { id: CLIP_IDS.tapLetter, label: 'Perintah di Mengenal Huruf', say: 'Ketuk hurufnya!' },
           { id: CLIP_IDS.tapPicture, label: 'Perintah di Belajar Bicara', say: 'Ketuk gambarnya!' },
           { id: CLIP_IDS.rest, label: 'Waktunya istirahat', say: 'Sudah dulu ya! Sampai jumpa!' },
+          { id: CLIP_IDS.findSame, label: 'Perintah di Memori', say: 'Cari yang sama!' },
+          { id: CLIP_IDS.followLine, label: 'Perintah di Menulis', say: 'Ikuti garisnya!' },
           { id: CLIP_IDS.continuePattern, label: 'Perintah di Pola', say: 'Lanjutkan polanya!' },
           { id: CLIP_IDS.tryAgain, label: 'Salah pilih di Pola', say: 'Coba lagi!' },
+        ],
+      },
+      {
+        title: 'Pola - pilihan jenis',
+        slots: [
+          { id: POLA_CLIP_IDS.line, label: 'Pilihan: baris', say: 'baris' },
+          { id: POLA_CLIP_IDS.box, label: 'Pilihan: kotak', say: 'kotak' },
         ],
       },
       {

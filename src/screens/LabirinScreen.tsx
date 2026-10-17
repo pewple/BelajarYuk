@@ -1,19 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, Hash, RotateCcw, Shuffle, Type } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { Hash, RotateCcw, Shuffle, Type } from 'lucide-react';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { Celebration } from '../components/Celebration';
 import { CardArt } from '../components/CardArt';
+import { ModeChooser } from '../components/ModeChooser';
+import type { ModeChoice } from '../components/ModeChooser';
+import { IconButton, NextButton } from '../components/RoundButtons';
 import { ScriptToggle } from '../components/ScriptToggle';
 import { MAZE_LEVELS, buildMaze, isFork, kindFor, routeEnds, stepResult } from '../data/maze';
 import { dueForReview, mazeItemKey, mazeItemPrefix, recordResult } from '../data/review';
 import type { Script } from '../data/scripts';
 import type { MazeKind, MazeMode, Position } from '../data/maze';
-import { CHEER_PROSODY, useAudio } from '../hooks/useAudio';
-import type { LetterLang } from '../hooks/useAudio';
+import { CHEER_PROSODY } from '../audio/voice';
+import { useAudio } from '../hooks/useAudio';
+import type { LetterLang } from '../audio/words';
 import { useDirectionKeys } from '../hooks/useDirectionKeys';
 import { useHints } from '../hooks/useHints';
-import { useIdleReminder } from '../hooks/useIdleReminder';
+import { useFlash } from '../hooks/useFlash';
+import { useInstruction } from '../hooks/useInstruction';
 import { useTapLock } from '../hooks/useTapLock';
 import { useGameFinished } from '../state/play';
 import type { Direction } from '../hooks/useDirectionKeys';
@@ -35,10 +39,10 @@ const HINT_MS = 2600;
 /** How long a wrong tile wiggles. */
 const WIGGLE_MS = 500;
 
-const CHOICES: { mode: MazeMode; title: string; glyph: string; icon: LucideIcon; theme: string }[] = [
-  { mode: 'letters', title: 'Huruf', glyph: 'A B C', icon: Type, theme: 'from-rose-500 to-red-600' },
-  { mode: 'numbers', title: 'Angka', glyph: '1 2 3', icon: Hash, theme: 'from-sky-600 to-blue-700' },
-  { mode: 'random', title: 'Acak', glyph: 'A 2 C', icon: Shuffle, theme: 'from-violet-600 to-purple-700' },
+const CHOICES: ModeChoice<MazeMode>[] = [
+  { id: 'letters', title: 'Huruf', glyph: 'A B C', icon: Type, theme: 'from-rose-500 to-red-600' },
+  { id: 'numbers', title: 'Angka', glyph: '1 2 3', icon: Hash, theme: 'from-sky-600 to-blue-700' },
+  { id: 'random', title: 'Acak', glyph: 'A 2 C', icon: Shuffle, theme: 'from-violet-600 to-purple-700' },
 ];
 
 /**
@@ -74,8 +78,9 @@ export function LabirinScreen({ onHome, letterLang, script, onScriptChange }: La
   const [started, setStarted] = useState(false);
   /** Where on the route the animal is standing. */
   const [at, setAt] = useState(0);
-  const [hint, setHint] = useState(false);
-  const [wiggling, setWiggling] = useState<number | null>(null);
+  // Each goes back to rest by itself: the glow on the right tile, the wrong tile's wiggle.
+  const [hint, setHint] = useFlash(false, HINT_MS);
+  const [wiggling, setWiggling] = useFlash<number | null>(null, WIGGLE_MS);
 
   const level = MAZE_LEVELS[levelIndex % MAZE_LEVELS.length];
 
@@ -107,33 +112,16 @@ export function LabirinScreen({ onHome, letterLang, script, onScriptChange }: La
     [kind, letterLang, level, playVoice, script],
   );
 
-  // The choice is spoken, not just shown: a pre-reader cannot read "Huruf".
-  useEffect(() => {
-    if (mode !== null) return;
-    sayChoose();
-  }, [mode, sayChoose]);
-
-  // So is the way through: "Ikuti huruf dari a sampai e!"
-  useEffect(() => {
-    if (mode === null) return;
-    sayInstruction();
-  }, [mode, levelIndex, attempt, sayInstruction]);
-
-  // A child who goes quiet hears it once more.
+  // The choice is spoken, not just shown - a pre-reader cannot read "Huruf" -
+  // and so is the way through: "Ikuti huruf dari a sampai e!" A child who goes
+  // quiet hears it once more. The way through is said again when anything it is
+  // made of changes (the level, the kind, the language, the script).
   const repeat = mode === null ? sayChoose : sayInstruction;
-  useIdleReminder(!done, `${mode}-${levelIndex}-${attempt}`, repeat);
-
-  useEffect(() => {
-    if (!hint) return;
-    const id = window.setTimeout(() => setHint(false), HINT_MS);
-    return () => window.clearTimeout(id);
-  }, [hint]);
-
-  useEffect(() => {
-    if (wiggling === null) return;
-    const id = window.setTimeout(() => setWiggling(null), WIGGLE_MS);
-    return () => window.clearTimeout(id);
-  }, [wiggling]);
+  useInstruction(
+    repeat,
+    mode === null ? 'choose' : `${mode}|${levelIndex}|${attempt}|${kind}|${letterLang}|${script}`,
+    { idleKey: `${mode}-${levelIndex}-${attempt}`, active: !done },
+  );
 
   const choose = useCallback(
     (picked: MazeMode) => {
@@ -250,25 +238,7 @@ export function LabirinScreen({ onHome, letterLang, script, onScriptChange }: La
   if (mode === null) {
     return (
       <ScreenFrame title="Labirin" onHome={onHome} onRepeat={repeat} caption="Pilih dulu, lalu mulai">
-        <div role="group" aria-label="Pilih isi labirin" className="flex w-full max-w-2xl flex-col gap-4 sm:flex-row">
-          {CHOICES.map((choice) => {
-            const Icon = choice.icon;
-            return (
-              <button
-                key={choice.mode}
-                type="button"
-                onClick={() => choose(choice.mode)}
-                className={`toddler-tap flex h-36 w-full flex-col items-center justify-center gap-2 rounded-[2.5rem] bg-gradient-to-br ${choice.theme} px-3 text-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 sm:h-56 sm:flex-1`}
-              >
-                <Icon aria-hidden="true" className="size-9 sm:size-14" strokeWidth={2.2} />
-                <span aria-hidden="true" className="text-3xl font-black tracking-wide drop-shadow-sm sm:text-4xl">
-                  {choice.glyph}
-                </span>
-                <span className="text-lg font-bold sm:text-xl">{choice.title}</span>
-              </button>
-            );
-          })}
-        </div>
+        <ModeChooser label="Pilih isi labirin" choices={CHOICES} onChoose={choose} />
 
         <div className="mt-8">
           <ScriptToggle value={script} onChange={onScriptChange} />
@@ -462,29 +432,9 @@ export function LabirinScreen({ onHome, letterLang, script, onScriptChange }: La
         </div>
 
         <div className="flex items-center justify-center gap-4">
-          {at > 0 && (
-            <button
-              type="button"
-              onClick={() => once('reset', handleReset)}
-              aria-label="Ulangi labirin"
-              className="toddler-tap flex size-20 items-center justify-center rounded-3xl bg-white text-slate-600 shadow-lg ring-2 ring-slate-200 outline-none hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-sky-400 active:scale-95"
-            >
-              <RotateCcw className="size-9" strokeWidth={2.6} />
-            </button>
-          )}
+          {at > 0 && <IconButton label="Ulangi labirin" icon={RotateCcw} onClick={() => once('reset', handleReset)} />}
 
-          {done && (
-            <button
-              type="button"
-              onClick={() => once('next', handleNext)}
-              aria-label="Labirin berikutnya"
-              className="toddler-tap flex h-20 items-center justify-center gap-3 rounded-3xl bg-emerald-600 px-8 text-2xl font-black text-white shadow-xl outline-none hover:bg-emerald-700 focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95"
-            >
-              <Check className="size-8" strokeWidth={3} />
-              Lanjut
-              <ArrowRight className="size-8" strokeWidth={3} />
-            </button>
-          )}
+          {done && <NextButton label="Labirin berikutnya" onClick={() => once('next', handleNext)} />}
         </div>
       </div>
     </ScreenFrame>

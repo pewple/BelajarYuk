@@ -1,34 +1,54 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Check } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { Box, Rows3, Shuffle } from 'lucide-react';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { Celebration } from '../components/Celebration';
+import { ModeChooser } from '../components/ModeChooser';
+import type { ModeChoice } from '../components/ModeChooser';
+import { NextButton } from '../components/RoundButtons';
+import { PolaBox } from '../components/PolaBox';
 import { PolaToken } from '../components/PolaToken';
-import { POLA_LEVELS, TOKENS, buildRound, fullPattern } from '../data/pola';
-import type { TokenId } from '../data/pola';
+import { LEVELS, TOKENS, buildRound, fullPattern, kindFor } from '../data/pola';
+import type { PolaKind, PolaMode, TokenId } from '../data/pola';
 import { POLA_PREFIX, dueForReview, polaItemKey, recordResult, reviewOrder } from '../data/review';
-import { KNOWS_THE_DRILL_AFTER } from '../data/session';
-import { CHEER_PROSODY, useAudio } from '../hooks/useAudio';
+import { CHEER_PROSODY } from '../audio/voice';
+import { useAudio } from '../hooks/useAudio';
 import { useHints } from '../hooks/useHints';
-import { useIdleReminder } from '../hooks/useIdleReminder';
+import { useFlash } from '../hooks/useFlash';
+import { useInstruction, useKnowsTheDrill } from '../hooks/useInstruction';
 import { useTapLock } from '../hooks/useTapLock';
-import { continueLine, patternLine, tryAgainLine } from '../media/polaVoice';
+import { chooseKindLine, continueLine, nameOf, patternLine, tryAgainLine } from '../media/polaVoice';
 import { stepsFor } from '../media/voiceParts';
-import { useGameFinished, usePlay } from '../state/play';
+import { useGameFinished } from '../state/play';
 
-/** How long the "look here" glow stays on the right shape after a wrong pick. */
+/** How long the "look here" glow stays on the right pick after a wrong one. */
 const HINT_MS = 2600;
-/** How long a wrong shape wiggles. */
+/** How long a wrong pick wiggles. */
 const WIGGLE_MS = 500;
 
+const CHOICES: ModeChoice<PolaMode>[] = [
+  { id: 'baris', title: 'Baris', glyph: '● ■ ●', icon: Rows3, theme: 'from-rose-500 to-red-600' },
+  { id: 'kotak', title: 'Kotak', glyph: '▣ ▣ ▣', icon: Box, theme: 'from-sky-600 to-blue-700' },
+  { id: 'acak', title: 'Acak', glyph: '● ▣ ■', icon: Shuffle, theme: 'from-violet-600 to-purple-700' },
+];
+
+/** Where a kind has got to in its own order of levels, and whether it has been played at all yet. */
+type Place = { index: number; sequential: number; played: boolean };
+
+const FRESH: Place = { index: 0, sequential: 0, played: false };
 
 /**
  * Pola - carry the pattern on.
  *
- * A row of shapes repeats and ends in a question mark; the child picks which
- * shape comes next from a tray that never moves. Wrong picks get a soft sound,
- * a wiggle and "Coba lagi!", then the right shape glows for a moment - the same
- * kind, gentle correction as the maze. A new child has the right shape glowing
- * from the start, and that help fades as they get it right (see data/hints.ts).
+ * First the child (or the grown-up beside them) picks what the pattern is made
+ * of: Baris - a row of single shapes, Kotak - a row of boxes that each hold two
+ * to four shapes, or Acak - which flips a coin for every round. Then a row
+ * repeats and ends in a question mark, and the child picks what comes next from
+ * a tray that never moves.
+ *
+ * Wrong picks get a soft sound, a wiggle and "Coba lagi!", then the right one
+ * glows for a moment - the same kind, gentle correction as the maze. A new child
+ * has the right pick glowing from the start, and that help fades as they get it
+ * right (see data/hints.ts).
  *
  * Getting it right says the whole row aloud, so the child hears the rhythm of
  * the pattern - "merah, biru, merah, biru, merah!" - not just one word.
@@ -36,55 +56,57 @@ const WIGGLE_MS = 500;
 export function PolaScreen({ onHome }: { onHome: () => void }) {
   const { playVoice, praiseStep, playPop, playChime, playNudge, playTap } = useAudio();
   const { guided, record } = useHints('pola');
-  const { gamesDone } = usePlay();
+  const knowsTheDrill = useKnowsTheDrill();
   const once = useTapLock();
 
+  /** What the child chose; null while they are still choosing. */
+  const [mode, setMode] = useState<PolaMode | null>(null);
+  /** What *this* round is made of. Fixed by the choice, except for "Acak". */
+  const [kind, setKind] = useState<PolaKind>('baris');
   /** How many rounds have been played: it decides where in the unit a row starts. */
   const [round, setRound] = useState(0);
-  /** Which level is showing, and where the fixed order has got to. */
-  const [place, setPlace] = useState({ index: 0, sequential: 0 });
-  const [picked, setPicked] = useState<TokenId | null>(null);
-  const [hint, setHint] = useState(false);
-  const [wiggling, setWiggling] = useState<TokenId | null>(null);
+  /** Where each kind has got to in its own fixed order of levels. */
+  const [places, setPlaces] = useState<Record<PolaKind, Place>>({ baris: FRESH, kotak: FRESH });
+  const [picked, setPicked] = useState<string | null>(null);
+  // Each goes back to rest by itself: the glow on the right pick, the wrong pick's wiggle.
+  const [hint, setHint] = useFlash(false, HINT_MS);
+  const [wiggling, setWiggling] = useFlash<string | null>(null, WIGGLE_MS);
 
-  const level = POLA_LEVELS[place.index];
+  const level = LEVELS[kind][places[kind].index];
   const current = useMemo(() => buildRound(level, round), [level, round]);
   const done = picked === current.answer;
 
   useGameFinished(done);
 
-  // Once a few rounds are done the child knows the drill, so the opening
-  // instruction goes. Held in a ref: finishing the third round must not itself
-  // make the app say it.
-  const knowsTheDrill = useRef(false);
-  useEffect(() => {
-    knowsTheDrill.current = gamesDone >= KNOWS_THE_DRILL_AFTER;
-  }, [gamesDone]);
+  const sayChoose = useCallback(() => playVoice(stepsFor(chooseKindLine())), [playVoice]);
+  const sayContinue = useCallback(() => playVoice(stepsFor(continueLine())), [playVoice]);
 
-  const instruct = useCallback(() => playVoice(stepsFor(continueLine())), [playVoice]);
+  // The choice is spoken, not just shown - a pre-reader cannot read "Baris" -
+  // and so is what to do. Once a few rounds are done the child knows the drill,
+  // so that goes; a child who goes quiet hears it once more.
+  const repeat = mode === null ? sayChoose : sayContinue;
+  useInstruction(repeat, `${mode}-${round}`, {
+    quiet: () => mode !== null && knowsTheDrill.current,
+    active: !done,
+  });
 
-  useEffect(() => {
-    if (!knowsTheDrill.current) instruct();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new round, nothing else
-  }, [round]);
-
-  // A child who goes quiet hears it once more.
-  useIdleReminder(!done, round, instruct);
-
-  useEffect(() => {
-    if (!hint) return;
-    const id = window.setTimeout(() => setHint(false), HINT_MS);
-    return () => window.clearTimeout(id);
-  }, [hint]);
-
-  useEffect(() => {
-    if (wiggling === null) return;
-    const id = window.setTimeout(() => setWiggling(null), WIGGLE_MS);
-    return () => window.clearTimeout(id);
-  }, [wiggling]);
+  const choose = useCallback(
+    (pickedMode: PolaMode) => {
+      playTap();
+      setMode(pickedMode);
+      const first = kindFor(pickedMode);
+      setKind(first);
+      setRound(0);
+      setPlaces({ baris: FRESH, kotak: FRESH, [first]: { ...FRESH, played: true } });
+      setPicked(null);
+      setHint(false);
+      setWiggling(null);
+    },
+    [playTap],
+  );
 
   const pick = useCallback(
-    (id: TokenId) => {
+    (id: string) => {
       if (done) return;
       const right = id === current.answer;
 
@@ -97,7 +119,7 @@ export function PolaScreen({ onHome }: { onHome: () => void }) {
         setHint(false);
         playPop();
         playChime();
-        playVoice([...stepsFor(patternLine(fullPattern(current)), CHEER_PROSODY), praiseStep()]);
+        playVoice([...stepsFor(patternLine(fullPattern(current), kind), CHEER_PROSODY), praiseStep()]);
       } else {
         // Not that one: a soft sound and the words, never a buzzer.
         playNudge();
@@ -106,55 +128,99 @@ export function PolaScreen({ onHome }: { onHome: () => void }) {
         playVoice(stepsFor(tryAgainLine()));
       }
     },
-    [current, done, level.id, playChime, playNudge, playPop, playVoice, praiseStep, record],
+    [current, done, kind, level.id, playChime, playNudge, playPop, playVoice, praiseStep, record],
   );
 
   const handleNext = useCallback(() => {
+    if (mode === null) return;
     playTap();
     setPicked(null);
     setHint(false);
     setWiggling(null);
+
+    // "Acak" flips its coin again for every round; a fixed choice stays put.
+    const next = kindFor(mode);
+    const levels = LEVELS[next];
     const weak = dueForReview(POLA_PREFIX).map((key) => key.slice(POLA_PREFIX.length));
-    setPlace((p) => reviewOrder(POLA_LEVELS.length, p.sequential, round + 1, (i) => weak.includes(POLA_LEVELS[i].id)));
+    setPlaces((p) => ({
+      ...p,
+      // A kind that has not come up yet starts at its first level; the order only
+      // moves for a kind that was actually played.
+      [next]: p[next].played
+        ? { ...reviewOrder(levels.length, p[next].sequential, round + 1, (i) => weak.includes(levels[i].id)), played: true }
+        : { ...FRESH, played: true },
+    }));
+    setKind(next);
     setRound((r) => r + 1);
-  }, [playTap, round]);
+  }, [mode, playTap, round]);
 
-  const answerToken = TOKENS[current.answer];
+  /* ---------------------------------------------------------------- */
+  /* Choosing                                                          */
+  /* ---------------------------------------------------------------- */
 
-  // A short row can have bigger shapes; a long one has to fit across a phone.
-  const TILE = current.shown.length <= 4 ? 'size-14 sm:size-20' : 'size-10 sm:size-16';
+  if (mode === null) {
+    return (
+      <ScreenFrame title="Pola" onHome={onHome} onRepeat={repeat} caption="Pilih dulu, lalu mulai">
+        <ModeChooser label="Pilih jenis pola" choices={CHOICES} onChoose={choose} />
+      </ScreenFrame>
+    );
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Playing                                                           */
+  /* ---------------------------------------------------------------- */
+
+  const boxes = kind === 'kotak';
+  const answerName = nameOf(current.answer, kind);
+
+  // A short row can have bigger things; a long one has to fit across a phone.
+  const TILE = boxes
+    ? 'size-16 sm:size-24'
+    : current.shown.length <= 4
+      ? 'size-14 sm:size-20'
+      : 'size-10 sm:size-16';
+
+  /** One thing in the row or the tray: a shape, or a box of shapes. */
+  const draw = (id: string, size: string) =>
+    boxes ? <PolaBox id={id} className={size} /> : <PolaToken token={TOKENS[id as TokenId]} className={size} />;
 
   return (
     <ScreenFrame
       title="Pola"
       onHome={onHome}
-      onRepeat={instruct}
+      onRepeat={repeat}
       caption={done ? 'Polanya sudah benar!' : 'Apa yang berikutnya?'}
     >
-      {done && (
-        <Celebration key={round} headline="Hebat!" subline={`Berikutnya ${answerToken.name}!`} />
-      )}
+      {done && <Celebration key={round} headline="Hebat!" subline={`Berikutnya ${answerName}!`} />}
 
       <div className="flex w-full max-w-xl flex-col items-center gap-8">
-        {/* The pattern so far, and the place where the next shape goes. */}
+        {/* The pattern so far, and the place where the next one goes. */}
         <ol aria-label="Pola" className="flex flex-wrap items-center justify-center gap-1 sm:gap-3">
           {current.shown.map((id, i) => (
             <li
               key={`${round}-${i}`}
-              aria-label={TOKENS[id].name}
-              className="flex items-center justify-center rounded-2xl bg-white p-0.5 shadow ring-1 ring-slate-200 sm:p-1"
+              aria-label={nameOf(id, kind)}
+              className={
+                boxes
+                  ? 'flex items-center justify-center'
+                  : 'flex items-center justify-center rounded-2xl bg-white p-0.5 shadow ring-1 ring-slate-200 sm:p-1'
+              }
             >
-              <PolaToken token={TOKENS[id]} className={TILE} />
+              {draw(id, TILE)}
             </li>
           ))}
           <li
-            aria-label={done ? answerToken.name : 'Yang mana berikutnya?'}
-            className={`flex items-center justify-center rounded-2xl p-0.5 sm:p-1 ${
-              done ? 'bg-white shadow ring-1 ring-slate-200' : 'border-2 border-dashed border-slate-400 bg-amber-100'
+            aria-label={done ? answerName : 'Yang mana berikutnya?'}
+            className={`flex items-center justify-center rounded-2xl ${boxes ? '' : 'p-0.5 sm:p-1'} ${
+              done && !boxes
+                ? 'bg-white shadow ring-1 ring-slate-200'
+                : done
+                  ? ''
+                  : 'border-2 border-dashed border-slate-400 bg-amber-100'
             }`}
           >
             {done ? (
-              <PolaToken token={answerToken} className={`animate-pop-in ${TILE}`} />
+              <span className="animate-pop-in">{draw(current.answer, TILE)}</span>
             ) : (
               <span aria-hidden="true" className={`flex items-center justify-center text-4xl font-black text-slate-600 ${TILE}`}>
                 ?
@@ -163,26 +229,27 @@ export function PolaScreen({ onHome }: { onHome: () => void }) {
           </li>
         </ol>
 
-        {/* What to pick from. The same shapes in the same places for every round of a level. */}
+        {/* What to pick from. The same things in the same places for every round of a level. */}
         {!done && (
           <section aria-label="Pilihan" className="flex flex-col items-center gap-3">
             <p className="text-sm font-bold text-slate-600">Ketuk yang berikutnya</p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               {level.palette.map((id) => {
-                const token = TOKENS[id];
                 const hinted = (guided || hint) && id === current.answer;
                 return (
                   <button
                     key={id}
                     type="button"
                     onClick={() => once(`pick-${id}`, () => pick(id))}
-                    aria-label={`Pilih ${token.name}`}
+                    aria-label={`Pilih ${nameOf(id, kind)}`}
                     data-hint={hinted ? 'true' : undefined}
-                    className={`toddler-tap flex size-24 items-center justify-center rounded-[2rem] bg-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 sm:size-32 ${
-                      hinted ? 'animate-gentle-bob ring-4 ring-amber-400' : 'ring-2 ring-slate-200'
-                    } ${wiggling === id ? 'animate-wiggle' : ''}`}
+                    className={`toddler-tap flex items-center justify-center rounded-[2rem] bg-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 ${
+                      boxes ? 'size-28 sm:size-40' : 'size-24 sm:size-32'
+                    } ${hinted ? 'animate-gentle-bob ring-4 ring-amber-400' : 'ring-2 ring-slate-200'} ${
+                      wiggling === id ? 'animate-wiggle' : ''
+                    }`}
                   >
-                    <PolaToken token={token} className="size-3/5" />
+                    {draw(id, boxes ? 'size-3/4' : 'size-3/5')}
                   </button>
                 );
               })}
@@ -190,18 +257,7 @@ export function PolaScreen({ onHome }: { onHome: () => void }) {
           </section>
         )}
 
-        {done && (
-          <button
-            type="button"
-            onClick={() => once('next', handleNext)}
-            aria-label="Pola berikutnya"
-            className="toddler-tap flex h-20 items-center justify-center gap-3 rounded-3xl bg-emerald-600 px-8 text-2xl font-black text-white shadow-xl outline-none hover:bg-emerald-700 focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95"
-          >
-            <Check className="size-8" strokeWidth={3} />
-            Lanjut
-            <ArrowRight className="size-8" strokeWidth={3} />
-          </button>
-        )}
+        {done && <NextButton label="Pola berikutnya" onClick={() => once('next', handleNext)} />}
       </div>
     </ScreenFrame>
   );

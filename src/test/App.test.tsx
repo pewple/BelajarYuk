@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { setupUser } from './user';
 import App from '../App';
 import { leaveGame } from './helpers';
 import { installVoice, spokenTexts, playedToneCounts } from './setup';
@@ -9,14 +10,7 @@ import {
   COUNTING_SETS,
   WORD_CARDS,
 } from '../data/curriculum';
-import {
-  COUNT_PROMPT_ID,
-  GREETING_ID,
-  LETTER_NAMES_EN,
-  LETTER_NAMES_ID,
-  PRAISE_ID,
-  numberWordId,
-} from '../hooks/useAudio';
+import { COUNT_PROMPT_ID, GREETING_ID, LETTER_NAMES_EN, LETTER_NAMES_ID, PRAISE_ID, numberWordId } from '../audio/words';
 
 /** Exact accessible name of a countable object in the given round (1-based). */
 function objectName(round: number): RegExp {
@@ -47,7 +41,7 @@ describe('Belajar Yuk!', () => {
   });
 
   it('greets with "Belajar Yuk!" once the page has had its first gesture', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(<App />);
 
     // A cold load cannot play audio until the browser has seen a gesture, so
@@ -60,7 +54,7 @@ describe('Belajar Yuk!', () => {
   });
 
   it('returns to the menu from a lesson screen', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(<App />);
 
     await user.click(screen.getByRole('button', { name: /Mengenal Huruf/ }));
@@ -71,7 +65,7 @@ describe('Belajar Yuk!', () => {
 
   describe('Mengenal Huruf', () => {
     it('speaks the Indonesian letter name when the big letter is tapped', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
 
       await user.click(screen.getByRole('button', { name: /Mengenal Huruf/ }));
@@ -88,7 +82,7 @@ describe('Belajar Yuk!', () => {
       expect(index, 'no letter differs between the two tables').toBeGreaterThanOrEqual(0);
       const letter = ALPHABET[index];
 
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
 
       await user.click(screen.getByRole('button', { name: /Mengenal Huruf/ }));
@@ -106,7 +100,7 @@ describe('Belajar Yuk!', () => {
     });
 
     it('navigates with the keyboard arrow keys', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
 
       await user.click(screen.getByRole('button', { name: /Mengenal Huruf/ }));
@@ -131,7 +125,7 @@ describe('Belajar Yuk!', () => {
     });
 
     it('pairs a letter with a familiar word and speaks each separately', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
 
       await user.click(screen.getByRole('button', { name: /Belajar Bicara/ }));
@@ -145,7 +139,7 @@ describe('Belajar Yuk!', () => {
     });
 
     it('keeps the arrows clickable after the card has been tapped', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
 
       await user.click(screen.getByRole('button', { name: /Belajar Bicara/ }));
@@ -161,7 +155,7 @@ describe('Belajar Yuk!', () => {
     });
 
     it('navigates with the keyboard arrow keys', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       render(<App />);
 
       await user.click(screen.getByRole('button', { name: /Belajar Bicara/ }));
@@ -180,14 +174,14 @@ describe('Belajar Yuk!', () => {
 
   describe('Berhitung', () => {
     it('gives the spoken instruction when a round starts', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openCounting(user);
 
       expect(spokenTexts).toContain(COUNT_PROMPT_ID);
     });
 
     it('counts one object, announces the total and celebrates', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openCounting(user);
 
       // Round 1 has a single object; tapping it completes the round.
@@ -203,7 +197,7 @@ describe('Belajar Yuk!', () => {
     });
 
     it('queues praise after the total so neither is cut off', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openCounting(user);
 
       await user.click(screen.getAllByRole('button', { name: objectName(1) })[0]);
@@ -222,7 +216,7 @@ describe('Belajar Yuk!', () => {
     });
 
     it('speaks the running count on every tap before the last', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openCounting(user);
 
       await user.click(screen.getAllByRole('button', { name: objectName(1) })[0]);
@@ -237,7 +231,7 @@ describe('Belajar Yuk!', () => {
     });
 
     it('advances to the next number and grows the set', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openCounting(user);
 
       await user.click(screen.getAllByRole('button', { name: objectName(1) })[0]);
@@ -248,7 +242,7 @@ describe('Belajar Yuk!', () => {
     });
 
     it('repeats the instruction when the round is reset', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       await openCounting(user);
 
       await user.click(screen.getAllByRole('button', { name: objectName(1) })[0]);

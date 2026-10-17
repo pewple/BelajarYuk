@@ -52,3 +52,24 @@ function browserEnvironment(): PwaEnvironment {
     },
   };
 }
+
+export type InstallContext = {
+  protocol: string;
+  /** Already running as an installed app (no browser bar). */
+  standalone: boolean;
+};
+
+/**
+ * Is installing worth mentioning here? Only over http(s) - a folder opened off
+ * the disk cannot be installed - and only if it is not installed already.
+ */
+export function installIsPossible(context: InstallContext = browserInstallContext()): boolean {
+  return /^https?:$/.test(context.protocol) && !context.standalone;
+}
+
+function browserInstallContext(): InstallContext {
+  const iosStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  const displayStandalone =
+    typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches;
+  return { protocol: window.location.protocol, standalone: iosStandalone || displayStandalone };
+}
