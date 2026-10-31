@@ -17,6 +17,8 @@ const HEADLINE_MS = 1900;
 type CelebrationProps = {
   /** Big word shown in the middle, e.g. the number that was just counted. */
   headline?: string;
+  /** Language of the headline, when it is not Indonesian: an Arabic letter wants an Arabic typeface. */
+  headlineLang?: string;
   /** Smaller line under the headline. */
   subline?: string;
 };
@@ -28,7 +30,7 @@ type CelebrationProps = {
  * it still hits the button underneath. Mount it with a changing `key` to
  * replay the animation.
  */
-export function Celebration({ headline, subline }: CelebrationProps) {
+export function Celebration({ headline, headlineLang, subline }: CelebrationProps) {
   const [showHeadline, setShowHeadline] = useState(true);
 
   useEffect(() => {
@@ -81,7 +83,10 @@ export function Celebration({ headline, subline }: CelebrationProps) {
           <div className="animate-pop-in flex flex-col items-center gap-3 rounded-[2.5rem] bg-white/92 px-10 py-8 shadow-2xl ring-4 ring-amber-300">
             <PartyPopper className="animate-wiggle size-16 text-amber-500" strokeWidth={2.2} />
             {headline && (
-              <span className="text-6xl font-black tracking-tight text-emerald-700 sm:text-7xl">
+              <span
+                lang={headlineLang}
+                className={`text-6xl font-black tracking-tight text-emerald-700 sm:text-7xl ${headlineLang === 'ar' ? 'font-arabic' : ''}`}
+              >
                 {headline}
               </span>
             )}

@@ -88,6 +88,15 @@ body {
   }
 }
 
+@keyframes peek-shrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
 @keyframes gentle-bob {
   0%,
   100% {
@@ -117,6 +126,11 @@ body {
   }
   .animate-confetti {
     animation: confetti-fall linear forwards;
+  }
+  /* The bar that empties while Memori's cards are on show. Its length is set inline. */
+  .animate-peek-shrink {
+    animation: peek-shrink linear forwards;
+    transform-origin: left;
   }
   .animate-gentle-bob {
     animation: gentle-bob 2.4s ease-in-out infinite;
@@ -148,6 +162,11 @@ body {
 
 /* Respect the OS setting - some children are sensitive to motion. */
 @media (prefers-reduced-motion: reduce) {
+  /* A bar that empties in no time would say "over" at once: the number carries the count instead. */
+  .animate-peek-shrink {
+    display: none;
+  }
+
   *,
   *::before,
   *::after {

@@ -1,170 +1,66 @@
+import { ARABIC_GLYPH_STROKES } from './glyphsArabic';
+import { CAPITALS, DIGITS, SMALL } from './glyphsLatin';
+import { HIJAIYAH, toArabicNumerals } from './scripts';
+import { dist, sample } from './strokeDsl';
+import type { Pt, StrokeDef } from './strokeDsl';
+
 /**
  * Menulis - tracing letters and numbers with a finger.
  *
- * Each glyph is a few strokes, drawn here as centre lines on a 100 x 100 board
- * in the order and direction a child is taught to write them: down before
- * across, left before right, round shapes anticlockwise from the top. The child
- * follows each stroke from its start dot; ink appears behind the finger as it
- * stays on the line.
+ * Each glyph is a few strokes, drawn as centre lines on a 100 x 100 board (see
+ * strokeDsl.ts for how, glyphsLatin.ts and glyphsArabic.ts for the glyphs
+ * themselves). The child follows each stroke from its start dot; ink appears
+ * behind the finger as it stays on the line.
  *
  * Tracing is forgiving by design. A finger that wanders off the line simply
  * stops drawing - nothing is lost, and coming back to where the ink ended
  * carries on. The only way to be "wrong" is to leave the corridor far enough
  * that it was clearly not an attempt, and even that is a soft nudge, not a
- * failure. This file is the geometry and the rules; the screen draws them.
+ * failure. This file is the rules; the screen draws them.
  */
 
-export type Pt = { x: number; y: number };
+export type { Pt } from './strokeDsl';
 
 /* ------------------------------------------------------------------ */
-/* Describing strokes                                                  */
+/* What there is to trace                                              */
 /* ------------------------------------------------------------------ */
 
-/**
- * One piece of a stroke, in the board's coordinates (y grows downwards):
- *  M x y                      start here
- *  L x y                      straight line
- *  Q cx cy x y                quadratic curve
- *  C c1x c1y c2x c2y x y      cubic curve
- *  A cx cy rx ry from to      part of an ellipse, angles in degrees; 0 is
- *                             right, 90 is down, so increasing is clockwise
- */
-type Seg =
-  | ['M', number, number]
-  | ['L', number, number]
-  | ['Q', number, number, number, number]
-  | ['C', number, number, number, number, number, number]
-  | ['A', number, number, number, number, number, number];
-
-const M = (x: number, y: number): Seg => ['M', x, y];
-const L = (x: number, y: number): Seg => ['L', x, y];
-const C = (a: number, b: number, c: number, d: number, x: number, y: number): Seg => ['C', a, b, c, d, x, y];
-const A = (cx: number, cy: number, rx: number, ry: number, from: number, to: number): Seg => ['A', cx, cy, rx, ry, from, to];
-
-const rad = (deg: number) => (deg * Math.PI) / 180;
-const dist = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y);
-
-/** Turns a stroke description into a dense polyline. */
-function sample(segs: Seg[]): Pt[] {
-  const out: Pt[] = [];
-  const push = (p: Pt) => {
-    const last = out[out.length - 1];
-    if (!last || dist(last, p) > 1e-6) out.push(p);
-  };
-  const lineTo = (to: Pt) => {
-    const from = out[out.length - 1];
-    if (!from) return push(to);
-    const steps = Math.max(1, Math.ceil(dist(from, to) / 2));
-    for (let i = 1; i <= steps; i += 1) {
-      push({ x: from.x + ((to.x - from.x) * i) / steps, y: from.y + ((to.y - from.y) * i) / steps });
-    }
-  };
-
-  for (const seg of segs) {
-    const from = out[out.length - 1];
-    switch (seg[0]) {
-      case 'M':
-        push({ x: seg[1], y: seg[2] });
-        break;
-      case 'L':
-        lineTo({ x: seg[1], y: seg[2] });
-        break;
-      case 'Q': {
-        const [, cx, cy, x, y] = seg;
-        for (let i = 1; i <= 20; i += 1) {
-          const t = i / 20;
-          const u = 1 - t;
-          push({ x: u * u * from.x + 2 * u * t * cx + t * t * x, y: u * u * from.y + 2 * u * t * cy + t * t * y });
-        }
-        break;
-      }
-      case 'C': {
-        const [, x1, y1, x2, y2, x, y] = seg;
-        for (let i = 1; i <= 28; i += 1) {
-          const t = i / 28;
-          const u = 1 - t;
-          push({
-            x: u * u * u * from.x + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x,
-            y: u * u * u * from.y + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y,
-          });
-        }
-        break;
-      }
-      case 'A': {
-        const [, cx, cy, rx, ry, a0, a1] = seg;
-        const at = (deg: number): Pt => ({ x: cx + rx * Math.cos(rad(deg)), y: cy + ry * Math.sin(rad(deg)) });
-        lineTo(at(a0)); // a no-op when the arc starts where the stroke already is
-        const steps = Math.max(4, Math.ceil(Math.abs(a1 - a0) / 4));
-        for (let i = 1; i <= steps; i += 1) push(at(a0 + ((a1 - a0) * i) / steps));
-        break;
-      }
-    }
-  }
-  return out;
-}
-
-/* ------------------------------------------------------------------ */
-/* The glyphs                                                          */
-/* ------------------------------------------------------------------ */
-
-const DEFINITIONS: Record<string, Seg[][]> = {
-  A: [[M(50, 10), L(15, 90)], [M(50, 10), L(85, 90)], [M(28, 62), L(72, 62)]],
-  B: [
-    [M(25, 10), L(25, 90)],
-    [M(25, 10), L(50, 10), A(50, 30, 20, 20, -90, 90), L(25, 50)],
-    [M(25, 50), L(52, 50), A(52, 70, 20, 20, -90, 90), L(25, 90)],
-  ],
-  C: [[A(55, 50, 38, 40, -45, -315)]],
-  D: [[M(25, 10), L(25, 90)], [M(25, 10), L(45, 10), A(45, 50, 40, 40, -90, 90), L(25, 90)]],
-  E: [[M(25, 10), L(25, 90)], [M(25, 10), L(75, 10)], [M(25, 50), L(65, 50)], [M(25, 90), L(75, 90)]],
-  F: [[M(25, 10), L(25, 90)], [M(25, 10), L(75, 10)], [M(25, 50), L(65, 50)]],
-  G: [[A(55, 50, 38, 40, -45, -360), L(58, 50)]],
-  H: [[M(25, 10), L(25, 90)], [M(75, 10), L(75, 90)], [M(25, 50), L(75, 50)]],
-  I: [[M(50, 10), L(50, 90)]],
-  J: [[M(65, 10), L(65, 65), A(45, 65, 20, 25, 0, 160)]],
-  K: [[M(25, 10), L(25, 90)], [M(75, 10), L(25, 55)], [M(40, 42), L(75, 90)]],
-  L: [[M(25, 10), L(25, 90), L(75, 90)]],
-  M: [[M(20, 90), L(20, 10), L(50, 60), L(80, 10), L(80, 90)]],
-  N: [[M(25, 90), L(25, 10), L(75, 90), L(75, 10)]],
-  O: [[A(50, 50, 36, 40, -90, -450)]],
-  P: [[M(25, 10), L(25, 90)], [M(25, 10), L(48, 10), A(48, 32, 27, 22, -90, 90), L(25, 54)]],
-  Q: [[A(50, 48, 36, 38, -90, -450)], [M(58, 62), L(85, 92)]],
-  R: [
-    [M(25, 10), L(25, 90)],
-    [M(25, 10), L(48, 10), A(48, 32, 27, 22, -90, 90), L(25, 54)],
-    [M(45, 54), L(78, 90)],
-  ],
-  S: [[M(72, 22), C(65, 8, 28, 8, 28, 30), C(28, 50, 72, 48, 72, 70), C(72, 92, 35, 92, 26, 76)]],
-  T: [[M(20, 10), L(80, 10)], [M(50, 10), L(50, 90)]],
-  U: [[M(25, 10), L(25, 60), A(50, 60, 25, 30, 180, 0), L(75, 10)]],
-  V: [[M(20, 10), L(50, 90), L(80, 10)]],
-  W: [[M(10, 10), L(30, 90), L(50, 30), L(70, 90), L(90, 10)]],
-  X: [[M(22, 10), L(78, 90)], [M(78, 10), L(22, 90)]],
-  Y: [[M(20, 10), L(50, 50)], [M(80, 10), L(50, 50), L(50, 90)]],
-  Z: [[M(22, 10), L(78, 10), L(22, 90), L(78, 90)]],
-
-  '0': [[A(50, 50, 28, 40, -90, -450)]],
-  '1': [[M(35, 28), L(50, 10), L(50, 90)]],
-  '2': [[A(50, 32, 25, 22, 180, 390), L(25, 90), L(78, 90)]],
-  '3': [[A(48, 30, 24, 20, -150, 90), A(48, 70, 26, 20, -90, 150)]],
-  '4': [[M(60, 10), L(20, 62), L(82, 62)], [M(60, 10), L(60, 90)]],
-  '5': [[M(72, 10), L(33, 10), L(33, 50), A(48, 68, 27, 22, -125, 145)]],
-  '6': [[M(68, 12), C(45, 8, 24, 34, 24, 68), A(48, 68, 24, 22, 180, 540)]],
-  '7': [[M(25, 10), L(75, 10), L(40, 90)]],
-  '8': [[A(50, 30, 20, 19, -30, -270), A(50, 70, 22, 20, -90, 270)]],
-  '9': [[A(52, 32, 24, 22, 0, -360), C(76, 56, 70, 88, 36, 88)]],
-};
+const DEFINITIONS: Record<string, StrokeDef[]> = { ...CAPITALS, ...SMALL, ...DIGITS, ...ARABIC_GLYPH_STROKES };
 
 export const TRACE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
-/** 1 to 9 and then 0: the order a child counts them in. */
-export const TRACE_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+export const TRACE_LOWERCASE = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
-export type TraceKind = 'letters' | 'numbers';
+/** 0 to 9, counting up. */
+export const TRACE_DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
+/** The 28 hijaiyah in their traditional order. A glyph is named by the letter itself. */
+export const TRACE_HIJAIYAH = HIJAIYAH.map((letter) => letter.glyph);
+
+/** ٠ to ٩, counting up. */
+export const TRACE_ARABIC_DIGITS = TRACE_DIGITS.map((digit) => toArabicNumerals(digit));
+
+export type TraceKind = 'letters' | 'lowercase' | 'numbers' | 'hijaiyah' | 'arabicNumbers';
+
+const GLYPHS: Record<TraceKind, string[]> = {
+  letters: TRACE_LETTERS,
+  lowercase: TRACE_LOWERCASE,
+  numbers: TRACE_DIGITS,
+  hijaiyah: TRACE_HIJAIYAH,
+  arabicNumbers: TRACE_ARABIC_DIGITS,
+};
+
+/** Everything of one kind, in the order it is learned: A to Z, a to z, 0 to 9, alif to ya. */
 export function glyphsFor(kind: TraceKind): string[] {
-  return kind === 'letters' ? TRACE_LETTERS : TRACE_DIGITS;
+  return GLYPHS[kind];
 }
+
+/** Written right to left. */
+export const isArabicKind = (kind: TraceKind) => kind === 'hijaiyah' || kind === 'arabicNumbers';
+
+/* ------------------------------------------------------------------ */
+/* Glyphs, ready to follow                                             */
+/* ------------------------------------------------------------------ */
 
 export type Stroke = {
   points: Pt[];
@@ -235,6 +131,10 @@ export const START_RADIUS = 16;
 export const LOOKAHEAD = 30;
 /** Within this of the end, the stroke is finished and snaps shut. */
 export const END_RADIUS = 9;
+/** A stroke this short is a dot: touching its start dot draws it. */
+export const DOT_LENGTH = 6;
+/** How far back along the line a touch is still matched, so a finger that jitters does not lose its place. */
+const LOOKBACK = 4;
 
 export type Trace = {
   /** Which stroke of the glyph is being drawn. */
@@ -262,12 +162,56 @@ export type TraceEvent =
 
 type Step = { trace: Trace; event: TraceEvent };
 
+/** The stroke is finished: on to the next, which has to be started afresh, or the glyph is done. */
+function finish(glyph: Glyph, trace: Trace, stroke: Stroke): Step {
+  const clean = trace.misses === 0;
+  const last = trace.stroke === glyph.strokes.length - 1;
+  return {
+    trace: last
+      ? { ...trace, progress: stroke.length, down: false, off: false, done: true }
+      : { stroke: trace.stroke + 1, progress: 0, down: false, off: false, misses: 0, done: false },
+    event: last ? { type: 'glyph', clean } : { type: 'stroke', clean },
+  };
+}
+
 /** A finger touches down. It only starts drawing if it is where the ink ends. */
 export function begin(glyph: Glyph, trace: Trace, p: Pt): Step {
   if (trace.done) return { trace, event: { type: 'none' } };
   const stroke = glyph.strokes[trace.stroke];
   if (dist(p, pointAt(stroke, trace.progress)) > START_RADIUS) return { trace, event: { type: 'none' } };
+
+  // A dot is drawn by touching it: there is nothing to follow.
+  if (stroke.length <= DOT_LENGTH) return finish(glyph, trace, stroke);
+
   return { trace: { ...trace, down: true, off: false }, event: { type: 'started' } };
+}
+
+/**
+ * Where on the stretch of `stroke` between `from` and `to` (distances along
+ * it) a point is nearest the line - to a fraction of a unit, not to the
+ * nearest corner of the polyline. That is what lets the ink follow a slow
+ * finger smoothly instead of stepping from sample to sample.
+ */
+function project(stroke: Stroke, p: Pt, from: number, to: number): { along: number; distance: number } {
+  let best = { along: from, distance: Infinity };
+
+  for (let i = 1; i < stroke.points.length; i += 1) {
+    const s0 = stroke.cum[i - 1];
+    const s1 = stroke.cum[i];
+    if (s1 < from) continue;
+    if (s0 > to) break;
+
+    const a = stroke.points[i - 1];
+    const b = stroke.points[i];
+    const length = s1 - s0 || 1;
+    const t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / (length * length);
+    // Keep to the allowed stretch, which may begin or end part-way along a piece.
+    const along = Math.min(to, Math.max(from, s0 + Math.min(1, Math.max(0, t)) * length));
+    const u = (along - s0) / length;
+    const distance = dist(p, { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u });
+    if (distance < best.distance) best = { along, distance };
+  }
+  return best;
 }
 
 /** The finger moves. */
@@ -275,21 +219,10 @@ export function drag(glyph: Glyph, trace: Trace, p: Pt): Step {
   if (!trace.down || trace.done) return { trace, event: { type: 'none' } };
 
   const stroke = glyph.strokes[trace.stroke];
-  let best = -1;
-  let bestDistance = Infinity;
-  for (let i = 0; i < stroke.points.length; i += 1) {
-    const along = stroke.cum[i];
-    if (along < trace.progress - 4) continue;
-    if (along > trace.progress + LOOKAHEAD) break;
-    const d = dist(p, stroke.points[i]);
-    if (d < bestDistance) {
-      bestDistance = d;
-      best = i;
-    }
-  }
+  const near = project(stroke, p, Math.max(0, trace.progress - LOOKBACK), Math.min(stroke.length, trace.progress + LOOKAHEAD));
 
-  if (best < 0 || bestDistance > TOLERANCE) {
-    if (bestDistance > OFF_COURSE) {
+  if (near.distance > TOLERANCE) {
+    if (near.distance > OFF_COURSE) {
       // Clearly away from the line: one soft nudge per wander, not one per movement.
       return trace.off
         ? { trace, event: { type: 'none' } }
@@ -299,20 +232,12 @@ export function drag(glyph: Glyph, trace: Trace, p: Pt): Step {
     return { trace: trace.off ? { ...trace, off: false } : trace, event: { type: 'none' } };
   }
 
-  const progress = Math.max(trace.progress, stroke.cum[best]);
+  const progress = Math.max(trace.progress, near.along);
   if (progress < stroke.length - END_RADIUS) {
     return { trace: { ...trace, progress, off: false }, event: { type: 'none' } };
   }
 
-  // The stroke is finished. The next one has to be started afresh.
-  const clean = trace.misses === 0;
-  const last = trace.stroke === glyph.strokes.length - 1;
-  return {
-    trace: last
-      ? { ...trace, progress: stroke.length, down: false, off: false, done: true }
-      : { stroke: trace.stroke + 1, progress: 0, down: false, off: false, misses: 0, done: false },
-    event: last ? { type: 'glyph', clean } : { type: 'stroke', clean },
-  };
+  return finish(glyph, trace, stroke);
 }
 
 /** The finger lifts. The ink stays where it got to. */

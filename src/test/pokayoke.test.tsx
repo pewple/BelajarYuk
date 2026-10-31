@@ -117,14 +117,77 @@ describe('the home button in a game', () => {
     expect(screen.getByRole('heading', { name: 'Berhitung' })).toBeInTheDocument();
   });
 
-  it('returns to the game on an empty answer', async () => {
+  it('has no check button: the answer is judged by itself when the last digit goes in', async () => {
     const user = setupUser();
     await open(user, /Berhitung/);
     await user.click(home());
-    await user.click(within(gate()!).getByRole('button', { name: 'Periksa jawaban' }));
 
-    expect(gate()).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Berhitung' })).toBeInTheDocument();
+    expect(within(gate()!).queryByRole('button', { name: /periksa/i })).not.toBeInTheDocument();
+    const { a, b } = gateSum();
+    const answer = String(a + b);
+
+    await user.click(within(gate()!).getByRole('button', { name: answer[0] }));
+    expect(gate()).toBeInTheDocument(); // one digit of two: still waiting
+    await user.click(within(gate()!).getByRole('button', { name: answer[1] }));
+    expect(screen.getByRole('heading', { name: 'Belajar Yuk!' })).toBeInTheDocument();
+  });
+
+  describe('typed on a keyboard', () => {
+    it('lets a grown-up out with the right digits', async () => {
+      const user = setupUser();
+      await open(user, /Berhitung/);
+      await user.click(home());
+      const { a, b } = gateSum();
+      await user.keyboard(String(a + b));
+
+      expect(gate()).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Belajar Yuk!' })).toBeInTheDocument();
+    });
+
+    it('goes back to the game on wrong digits', async () => {
+      const user = setupUser();
+      await open(user, /Berhitung/);
+      await user.click(home());
+      const { a, b } = gateSum();
+      await user.keyboard(String(a + b + 1));
+
+      expect(gate()).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Berhitung' })).toBeInTheDocument();
+    });
+
+    it('shows what was typed, and Backspace takes a digit back', async () => {
+      const user = setupUser();
+      await open(user, /Berhitung/);
+      await user.click(home());
+      const { a, b } = gateSum();
+      const answer = String(a + b);
+
+      await user.keyboard(answer[0]);
+      expect(gate()).toHaveTextContent(`Jawaban Anda: ${answer[0]}.`);
+      await user.keyboard('{Backspace}');
+      expect(gate()).toHaveTextContent('Jawaban Anda: kosong.');
+      await user.keyboard(answer);
+      expect(gate()).not.toBeInTheDocument();
+    });
+
+    it('ignores letters and shortcuts', async () => {
+      const user = setupUser();
+      await open(user, /Berhitung/);
+      await user.click(home());
+      await user.keyboard('ab{Enter}');
+      await user.keyboard('{Control>}1{/Control}');
+
+      expect(gate()).toHaveTextContent('Jawaban Anda: kosong.');
+    });
+
+    it('does not pull up a phone keyboard: there is no text field', async () => {
+      const user = setupUser();
+      await open(user, /Berhitung/);
+      await user.click(home());
+
+      expect(within(gate()!).queryByRole('textbox')).not.toBeInTheDocument();
+      expect(gate()!.querySelector('input, textarea')).toBeNull();
+    });
   });
 
   it('returns to the game from "Kembali bermain" and from Escape', async () => {
@@ -141,16 +204,36 @@ describe('the home button in a game', () => {
     expect(screen.getByRole('heading', { name: 'Berhitung' })).toBeInTheDocument();
   });
 
-  it('takes two digits at most, and can delete', async () => {
+  it('can delete a digit on the keypad', async () => {
     const user = setupUser();
     await open(user, /Berhitung/);
     await user.click(home());
 
     const dialog = gate()!;
-    for (const digit of '123') await user.click(within(dialog).getByRole('button', { name: digit }));
-    expect(dialog).toHaveTextContent('Jawaban Anda: 12.');
+    const { a, b } = gateSum();
+    const answer = String(a + b);
+    await user.click(within(dialog).getByRole('button', { name: answer[0] }));
+    expect(dialog).toHaveTextContent(`Jawaban Anda: ${answer[0]}.`);
     await user.click(within(dialog).getByRole('button', { name: 'Hapus' }));
-    expect(dialog).toHaveTextContent('Jawaban Anda: 1.');
+    expect(dialog).toHaveTextContent('Jawaban Anda: kosong.');
+  });
+
+  it('shows a hint about the keyboard only where there is a mouse or trackpad', async () => {
+    const user = setupUser();
+    const original = window.matchMedia;
+    try {
+      window.matchMedia = ((query: string) => ({ matches: query.includes('fine'), media: query }) as MediaQueryList) as typeof window.matchMedia;
+      await open(user, /Berhitung/);
+      await user.click(home());
+      expect(gate()).toHaveTextContent('Bisa juga diketik');
+
+      await user.click(screen.getByRole('button', { name: 'Kembali bermain' }));
+      window.matchMedia = ((query: string) => ({ matches: false, media: query }) as MediaQueryList) as typeof window.matchMedia;
+      await user.click(home());
+      expect(gate()).not.toHaveTextContent('Bisa juga diketik');
+    } finally {
+      window.matchMedia = original;
+    }
   });
 
   it('is not steered by the arrow keys behind the dialog', async () => {

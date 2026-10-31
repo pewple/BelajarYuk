@@ -9,6 +9,7 @@ import { COUNT_PROMPT_ID, GREETING_ID, LETTER_NAMES_EN, LETTER_NAMES_ID, numberW
 import {
   CLIP_IDS,
   MAZE_CLIP_IDS,
+  MEMORI_CLIP_IDS,
   MONEY_CLIP_IDS,
   arabicLetterClipId,
   arabicNumberClipId,
@@ -127,6 +128,8 @@ export function buildSlots(): SlotCatalogue {
           { id: CLIP_IDS.rest, label: 'Waktunya istirahat', say: 'Sudah dulu ya! Sampai jumpa!' },
           { id: CLIP_IDS.findSame, label: 'Perintah di Memori', say: 'Cari yang sama!' },
           { id: CLIP_IDS.followLine, label: 'Perintah di Menulis', say: 'Ikuti garisnya!' },
+          { id: CLIP_IDS.lookFirst, label: 'Memori: kartu dilihat dulu', say: 'Lihat dulu!' },
+          { id: CLIP_IDS.start, label: 'Memori: kartu ditutup, mulai', say: 'Mulai!' },
           { id: CLIP_IDS.continuePattern, label: 'Perintah di Pola', say: 'Lanjutkan polanya!' },
           { id: CLIP_IDS.tryAgain, label: 'Salah pilih di Pola', say: 'Coba lagi!' },
         ],
@@ -166,6 +169,11 @@ export function buildSlots(): SlotCatalogue {
         ],
       },
       {
+        // "Pilih gambar, huruf, atau acak!" - the rest of it is in the maze's words above.
+        title: 'Memori - pilihan jenis',
+        slots: [{ id: MEMORI_CLIP_IDS.picture, label: 'Pilihan: gambar', say: 'gambar' }],
+      },
+      {
         title: 'Kasir - kata tetap',
         slots: [
           { id: MONEY_CLIP_IDS.price, label: 'Harganya', say: 'Harganya' },
@@ -195,6 +203,8 @@ export function buildSlots(): SlotCatalogue {
           { id: CLIP_IDS.coin, label: 'Uang diberikan (koin)' },
           { id: CLIP_IDS.register, label: 'Kembalian benar (ka-ching)' },
           { id: CLIP_IDS.nudge, label: 'Bukan yang itu (hmm lembut)' },
+          { id: CLIP_IDS.tick, label: 'Hitung mundur di Memori (tik)' },
+          { id: CLIP_IDS.go, label: 'Hitung mundur selesai (ting-ting)' },
         ],
       },
     ],

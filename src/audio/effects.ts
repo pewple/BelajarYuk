@@ -133,7 +133,7 @@ function playClipNow(url: string, volume = 1): boolean {
 /* The effects                                                         */
 /* ------------------------------------------------------------------ */
 
-export type EffectName = 'pop' | 'tap' | 'chime' | 'coin' | 'register' | 'nudge';
+export type EffectName = 'pop' | 'tap' | 'chime' | 'coin' | 'register' | 'nudge' | 'tick' | 'go';
 
 type Effect = {
   /** The recording that replaces it, if one was supplied. */
@@ -185,6 +185,22 @@ const EFFECTS: Record<EffectName, Effect> = {
       playTone(ctx, { freq: 2093, type: 'sine', delay: 0.08, duration: 0.9, peak: 0.13 });
       playTone(ctx, { freq: 3136, type: 'sine', delay: 0.08, duration: 0.65, peak: 0.08 });
       playTone(ctx, { freq: 4186, type: 'sine', delay: 0.08, duration: 0.4, peak: 0.05 });
+    },
+  },
+
+  // One short, dry wooden click: a clock, counting down. Quiet and the same
+  // every time, so a rhythm forms and nothing in it startles.
+  tick: {
+    clip: CLIP_IDS.tick,
+    make: (ctx) => playTone(ctx, { freq: 740, toFreq: 620, type: 'triangle', duration: 0.06, peak: 0.12 }),
+  },
+
+  // Two bright notes stepping up: "ready, go!". The end of a countdown.
+  go: {
+    clip: CLIP_IDS.go,
+    make: (ctx) => {
+      playTone(ctx, { freq: 523.25, type: 'triangle', duration: 0.14, peak: 0.18 });
+      playTone(ctx, { freq: 783.99, type: 'triangle', delay: 0.12, duration: 0.3, peak: 0.2 });
     },
   },
 

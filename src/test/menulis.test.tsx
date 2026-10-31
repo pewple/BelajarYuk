@@ -5,11 +5,12 @@ import { setupUser } from './user';
 import App from '../App';
 import { HINTS_STORAGE_KEY } from '../data/hints';
 import { REVIEW_STORAGE_KEY } from '../data/review';
+import { HIJAIYAH } from '../data/scripts';
 import { UNLOCK_AFTER_GAMES } from '../data/session';
 import { OFF_COURSE, glyphOf, pointAt } from '../data/tracing';
 import type { Pt } from '../data/tracing';
 import { leaveGame } from './helpers';
-import { installVoice, playedToneCounts, spokenTexts } from './setup';
+import { installVoice, playedToneCounts, spokenTexts, spokenUtterances } from './setup';
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -65,12 +66,17 @@ async function open(user: User) {
   await user.click(screen.getByRole('button', { name: /Menulis/ }));
 }
 
-async function enter(user: User, choice: 'Huruf' | 'Angka') {
+type Choice = 'Huruf' | 'Huruf kecil' | 'Angka' | 'Hijaiyah' | 'Angka Arab';
+
+async function enter(user: User, choice: Choice) {
   await open(user);
   await user.click(screen.getByRole('button', { name: choice }));
 }
 
-const nextButton = () => screen.getByRole('button', { name: /^(Lewati, berikutnya|Huruf berikutnya|Angka berikutnya)$/ });
+const nextButton = () =>
+  screen.getByRole('button', {
+    name: /^(Lewati, berikutnya|Huruf berikutnya|Huruf kecil berikutnya|Angka berikutnya|Huruf hijaiyah berikutnya|Angka Arab berikutnya)$/,
+  });
 const followDot = () => screen.queryByTestId('follow-dot');
 
 const setHints = (level: 'guided' | 'independent', streak = 0) =>
@@ -91,13 +97,14 @@ describe('Menulis', () => {
       expect(order).toEqual(titles);
     });
 
-    it('asks first: letters or numbers, out loud and in writing, and shows no board yet', async () => {
+    it('asks first what to write, out loud and in writing, and shows no board yet', async () => {
       const user = setupUser();
       await open(user);
 
       expect(screen.getByRole('heading', { name: 'Menulis' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Huruf' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Angka' })).toBeInTheDocument();
+      for (const name of ['Huruf', 'Huruf kecil', 'Angka', 'Hijaiyah', 'Angka Arab']) {
+        expect(screen.getByRole('button', { name })).toBeInTheDocument();
+      }
       expect(screen.queryByRole('group', { name: /^Papan menulis/ })).not.toBeInTheDocument();
       expect(spokenTexts).toContain('Pilih huruf atau angka!');
     });
@@ -119,7 +126,7 @@ describe('Menulis', () => {
       expect(screen.getByRole('heading', { name: 'Belajar Yuk!' })).toBeInTheDocument();
     });
 
-    it('has no Arabic switch: the shapes drawn are Latin letters and digits', async () => {
+    it('has no script switch: Arabic is a choice of its own, whatever the rest of the app is set to', async () => {
       window.localStorage.setItem('belajar-yuk:script', 'arab');
       const user = setupUser();
       await enter(user, 'Huruf');
@@ -244,19 +251,20 @@ describe('Menulis', () => {
   });
 
   describe('a number', () => {
-    it('starts at 1 and says it as a number word', async () => {
+    it('starts at 0 and says it as a number word', async () => {
       const user = setupUser();
       await enter(user, 'Angka');
       spokenTexts.length = 0;
 
-      expect(screen.getByText('Telusuri angka 1')).toBeInTheDocument();
-      traceStroke('1', 0, { upTo: 10 });
-      expect(spokenTexts).toContain('satu');
+      expect(screen.getByText('Telusuri angka 0')).toBeInTheDocument();
+      traceStroke('0', 0, { upTo: 10 });
+      expect(spokenTexts).toContain('nol');
     });
 
     it('can be traced and celebrated like a letter', async () => {
       const user = setupUser();
       await enter(user, 'Angka');
+      await user.click(nextButton()); // 1
       traceGlyph('1');
 
       expect(isDone()).toBe(true);
@@ -264,16 +272,16 @@ describe('Menulis', () => {
       expect(screen.getByRole('button', { name: 'Angka berikutnya' })).toBeInTheDocument();
     });
 
-    it('goes 1 to 9 and then 0', async () => {
+    it('goes 0 to 9 in counting order, and round again', async () => {
       const user = setupUser();
       await enter(user, 'Angka');
       const seen: string[] = [];
-      for (let n = 0; n < 10; n += 1) {
+      for (let n = 0; n < 11; n += 1) {
         seen.push(screen.getByText(/^Telusuri angka /).textContent!.slice(-1));
         await user.click(nextButton());
       }
 
-      expect(seen).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
+      expect(seen).toEqual(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
     });
   });
 
@@ -481,44 +489,268 @@ describe('Menulis', () => {
     });
   });
 
-  describe('the review', () => {
-    it('files a stroke that wandered as a miss, under the letter', async () => {
+  describe('the order', () => {
+    const wander = (id: string) => {
+      touch('pointerdown', glyphOf(id).strokes[0].points[0]);
+      touch('pointermove', spot(id, 0, 10));
+      touch('pointermove', { x: 98, y: 4 });
+      touch('pointermove', spot(id, 0, 12));
+      touch('pointerup');
+    };
+    const current = () => screen.getByText(/^Telusuri /).textContent!.split(' ').at(-1);
+
+    it('goes straight on, A to Z, however a letter went: nothing is brought back early', async () => {
       const user = setupUser();
       await enter(user, 'Huruf');
-      touch('pointerdown', glyphOf('A').strokes[0].points[0]);
-      touch('pointermove', spot('A', 0, 10));
-      touch('pointermove', { x: 98, y: 4 });
-      touch('pointermove', spot('A', 0, 12));
-      touch('pointerup');
+      wander('A');
       traceStroke('A', 0);
 
-      expect(JSON.parse(window.localStorage.getItem(REVIEW_STORAGE_KEY)!)['menulis:letters:A']).toMatchObject({
-        box: 0,
-        misses: 1,
-      });
-    });
+      const seen: string[] = [];
+      for (let n = 0; n < 26; n += 1) {
+        seen.push(current()!);
+        await user.click(nextButton());
+      }
+      expect(seen.join('')).toBe('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+    }, 30_000);
 
-    it('records nothing for a letter written cleanly the first time', async () => {
-      const user = setupUser();
-      await enter(user, 'Huruf');
-      traceGlyph('A');
-
-      expect(window.localStorage.getItem(REVIEW_STORAGE_KEY)).toBeNull();
-    });
-
-    it('brings a fumbled letter round again, every third letter', async () => {
+    it('ignores letters in the review book: the order is the order', async () => {
       window.localStorage.setItem(
         REVIEW_STORAGE_KEY,
         JSON.stringify({ 'menulis:letters:A': { box: 0, due: 0, misses: 1 } }),
       );
       const user = setupUser();
       await enter(user, 'Huruf');
-      await user.click(nextButton()); // B
-      expect(screen.getByText('Telusuri huruf B')).toBeInTheDocument();
-      await user.click(nextButton()); // the review slot: A again
-      expect(screen.getByText('Telusuri huruf A')).toBeInTheDocument();
-      await user.click(nextButton()); // and the order carries on: C
-      expect(screen.getByText('Telusuri huruf C')).toBeInTheDocument();
+      const seen: string[] = [];
+      for (let n = 0; n < 6; n += 1) {
+        seen.push(current()!);
+        await user.click(nextButton());
+      }
+
+      expect(seen.join('')).toBe('ABCDEF');
+    });
+
+    it('keeps no review book for Menulis at all', async () => {
+      const user = setupUser();
+      await enter(user, 'Huruf');
+      wander('A');
+      traceStroke('A', 0);
+      traceGlyph('A');
+
+      expect(window.localStorage.getItem(REVIEW_STORAGE_KEY)).toBeNull();
+    });
+  });
+
+  describe('small letters', () => {
+    it('start at a, with the copybook lines behind the board', async () => {
+      const user = setupUser();
+      await enter(user, 'Huruf kecil');
+
+      expect(screen.getByText('Telusuri huruf kecil a')).toBeInTheDocument();
+      expect(screen.getByTestId('copybook-lines')).toBeInTheDocument();
+    });
+
+    it('have no copybook lines for capitals or numbers', async () => {
+      const user = setupUser();
+      await enter(user, 'Huruf');
+      expect(screen.queryByTestId('copybook-lines')).not.toBeInTheDocument();
+    });
+
+    it('are said by the same names as the capitals, and celebrated as small letters', async () => {
+      const user = setupUser();
+      await enter(user, 'Huruf kecil');
+      await user.click(nextButton()); // b
+      spokenTexts.length = 0;
+      traceGlyph('b');
+
+      expect(isDone()).toBe(true);
+      expect(screen.getByText('Huruf kecil b!')).toBeInTheDocument();
+      await vi.waitFor(() => expect(spokenTexts).toContain('be!'));
+      expect(screen.getByRole('button', { name: 'Huruf kecil berikutnya' })).toBeInTheDocument();
+    });
+
+    it('draw the dot of an i and a j by touching it', async () => {
+      const user = setupUser();
+      await enter(user, 'Huruf kecil');
+      for (let n = 0; n < 8; n += 1) await user.click(nextButton()); // i
+      expect(screen.getByText('Telusuri huruf kecil i')).toBeInTheDocument();
+
+      traceStroke('i', 0);
+      expect(strokeNumber()).toBe(1); // now the dot
+      touch('pointerdown', glyphOf('i').strokes[1].points[0]);
+      expect(isDone()).toBe(true);
+    });
+
+    it('go a to z in order and round to a again', async () => {
+      const user = setupUser();
+      await enter(user, 'Huruf kecil');
+      const seen: string[] = [];
+      for (let n = 0; n < 27; n += 1) {
+        seen.push(screen.getByText(/^Telusuri huruf kecil /).textContent!.slice(-1));
+        await user.click(nextButton());
+      }
+
+      expect(seen.join('')).toBe('abcdefghijklmnopqrstuvwxyza');
+    }, 30_000);
+  });
+
+  describe('hijaiyah', () => {
+    it('start at alif, and say so', async () => {
+      const user = setupUser();
+      await enter(user, 'Hijaiyah');
+      spokenTexts.length = 0;
+
+      expect(screen.getByText('Telusuri huruf hijaiyah ا')).toBeInTheDocument();
+      traceStroke('ا', 0, { upTo: 10 });
+      expect(spokenTexts).toContain('alif');
+    });
+
+    it('are said in Arabic when the device has an Arabic voice', async () => {
+      installVoice('Test Arabic', 'ar-SA');
+      const user = setupUser();
+      await enter(user, 'Hijaiyah');
+      spokenUtterances.length = 0;
+      traceStroke('ا', 0, { upTo: 10 });
+
+      expect(spokenUtterances.map((u) => `${u.lang}|${u.text}`)).toContain('ar-SA|ألف');
+    });
+
+    it('tell the grown-up that Arabic is written from right to left, and start at the right', async () => {
+      const user = setupUser();
+      await enter(user, 'Hijaiyah');
+      await user.click(nextButton()); // ba
+
+      expect(screen.getByText('Bahasa Arab ditulis dari kanan ke kiri.')).toBeInTheDocument();
+      const dot = screen.getByTestId('start-dot');
+      expect(Number(dot.getAttribute('cx'))).toBeGreaterThan(50);
+    });
+
+    it('are written body first, then each dot by a touch, and celebrated when the last dot is down', async () => {
+      const user = setupUser();
+      await enter(user, 'Hijaiyah');
+      await user.click(nextButton()); // ba
+      await user.click(nextButton()); // ta
+      expect(screen.getByText('Telusuri huruf hijaiyah ت')).toBeInTheDocument();
+
+      traceStroke('ت', 0);
+      expect(strokeNumber()).toBe(1);
+      touch('pointerdown', glyphOf('ت').strokes[1].points[0]);
+      expect(strokeNumber()).toBe(2);
+      expect(isDone()).toBe(false);
+      touch('pointerdown', glyphOf('ت').strokes[2].points[0]);
+
+      expect(isDone()).toBe(true);
+      expect(screen.getByText('Huruf hijaiyah ت!')).toBeInTheDocument();
+    });
+
+    it('go alif to ya in the traditional order, and round again', async () => {
+      const user = setupUser();
+      await enter(user, 'Hijaiyah');
+      const seen: string[] = [];
+      for (let n = 0; n < 29; n += 1) {
+        seen.push(screen.getByText(/^Telusuri huruf hijaiyah /).textContent!.split(' ').at(-1)!);
+        await user.click(nextButton());
+      }
+
+      expect(seen.join('')).toBe(HIJAIYAH.map((h) => h.glyph).join('') + 'ا');
+    }, 30_000);
+
+    it('show the glyph in an Arabic typeface when celebrated', async () => {
+      const user = setupUser();
+      await enter(user, 'Hijaiyah');
+      traceGlyph('ا');
+
+      const headline = screen.getByTestId('celebration').querySelector('[lang="ar"]');
+      expect(headline).toHaveTextContent('ا');
+      expect(headline).toHaveClass('font-arabic');
+    });
+  });
+
+  describe('Arabic numbers', () => {
+    it('start at the Arabic zero, a dot, which is done as soon as it is touched', async () => {
+      const user = setupUser();
+      await enter(user, 'Angka Arab');
+      spokenTexts.length = 0;
+
+      expect(screen.getByText('Telusuri angka Arab ٠')).toBeInTheDocument();
+      touch('pointerdown', glyphOf('٠').strokes[0].points[0]);
+
+      expect(isDone()).toBe(true);
+      expect(screen.getByText('Angka Arab ٠!')).toBeInTheDocument();
+      await vi.waitFor(() => expect(spokenTexts).toContain('sifr!'));
+    });
+
+    it('say the Arabic number names', async () => {
+      const user = setupUser();
+      await enter(user, 'Angka Arab');
+      for (let n = 0; n < 3; n += 1) await user.click(nextButton()); // ٣
+      spokenTexts.length = 0;
+      traceStroke('٣', 0, { upTo: 10 });
+
+      expect(spokenTexts).toContain('tsalatsah');
+    });
+
+    it('go zero to nine, and round again', async () => {
+      const user = setupUser();
+      await enter(user, 'Angka Arab');
+      const seen: string[] = [];
+      for (let n = 0; n < 11; n += 1) {
+        seen.push(screen.getByText(/^Telusuri angka Arab /).textContent!.split(' ').at(-1)!);
+        await user.click(nextButton());
+      }
+
+      expect(seen.join('')).toBe('٠١٢٣٤٥٦٧٨٩٠');
+    });
+  });
+
+  describe('a smooth pen', () => {
+    it('follows every point a fast stroke was drawn through, when the browser hands them over together', async () => {
+      const user = setupUser();
+      await enter(user, 'Huruf');
+      const stroke = glyphOf('A').strokes[0];
+      const path = Array.from({ length: Math.ceil(stroke.length / 6) + 1 }, (_, i) => pointAt(stroke, Math.min(i * 6, stroke.length)));
+
+      touch('pointerdown', stroke.points[0]);
+      // One move event for the whole stroke, with the path in between kept in it.
+      const move = new MouseEvent('pointermove', { clientX: path.at(-1)!.x, clientY: path.at(-1)!.y, bubbles: true });
+      Object.defineProperty(move, 'getCoalescedEvents', {
+        value: () => path.map((p) => ({ clientX: p.x, clientY: p.y })),
+      });
+      fireEvent(board(), move);
+
+      expect(strokeNumber()).toBe(1);
+    });
+
+    it('cannot be jumped ahead with a single far-off point, as before', async () => {
+      const user = setupUser();
+      await enter(user, 'Huruf');
+      const stroke = glyphOf('A').strokes[0];
+      touch('pointerdown', stroke.points[0]);
+      touch('pointermove', stroke.points.at(-1));
+
+      expect(strokeNumber()).toBe(0);
+    });
+
+    it('measures the board once when a finger goes down, not at every movement', async () => {
+      const user = setupUser();
+      await enter(user, 'Huruf');
+      const stroke = glyphOf('A').strokes[0];
+      touch('pointerdown', stroke.points[0]);
+      const measured = rect.mock.calls.length;
+      for (let s = 2; s < 40; s += 2) touch('pointermove', pointAt(stroke, s));
+
+      expect(progress()).toBeGreaterThan(30);
+      expect(rect.mock.calls.length).toBe(measured);
+    });
+
+    it('keeps the start dot still while a finger is on it, and pulses it otherwise', async () => {
+      const user = setupUser();
+      await enter(user, 'Huruf');
+      expect(screen.getByTestId('start-dot')).toHaveClass('animate-pulse');
+
+      touch('pointerdown', glyphOf('A').strokes[0].points[0]);
+      expect(screen.getByTestId('start-dot')).not.toHaveClass('animate-pulse');
+      touch('pointerup');
+      expect(screen.getByTestId('start-dot')).toHaveClass('animate-pulse');
     });
   });
 

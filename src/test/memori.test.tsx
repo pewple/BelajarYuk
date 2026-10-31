@@ -10,6 +10,8 @@ import {
   MEMORI_WORDS,
   deal,
   flip,
+  kindFor,
+  levelsOf,
   pairsFor,
   partnerOf,
   seedFor,
@@ -19,9 +21,9 @@ import type { Board } from '../data/memori';
 import { WORD_CARDS } from '../data/curriculum';
 import { REVIEW_STORAGE_KEY } from '../data/review';
 import { UNLOCK_AFTER_GAMES } from '../data/session';
-import { MISMATCH_MS, peekMs } from '../screens/MemoriScreen';
+import { MISMATCH_MS, peekMs, peekSeconds } from '../screens/MemoriScreen';
 import { leaveGame } from './helpers';
-import { installVoice, spokenTexts } from './setup';
+import { installVoice, playedToneCounts, spokenTexts } from './setup';
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -36,9 +38,22 @@ const boardFor = (level: number, round: number, weak: string[] = []): Board =>
 const positions = (board: Board, pair: string) => board.cards.filter((c) => c.pair === pair).map((c) => c.index);
 
 describe('the levels', () => {
-  it('start at four cards, grow to eight, and then pair letters with pictures', () => {
-    expect(MEMORI_LEVELS.map((l) => l.pairs)).toEqual([2, 3, 4, 3, 4]);
-    expect(MEMORI_LEVELS.map((l) => l.mode)).toEqual(['picture', 'picture', 'picture', 'letter', 'letter']);
+  it('go from four cards to eight with pictures, and again with letters and pictures', () => {
+    expect(MEMORI_LEVELS.map((l) => l.pairs)).toEqual([2, 3, 4, 2, 3, 4]);
+    expect(MEMORI_LEVELS.map((l) => l.mode)).toEqual(['picture', 'picture', 'picture', 'letter', 'letter', 'letter']);
+  });
+
+  it('are split by kind, each kind easiest first', () => {
+    expect(levelsOf('picture').map((l) => l.pairs)).toEqual([2, 3, 4]);
+    expect(levelsOf('letter').map((l) => l.pairs)).toEqual([2, 3, 4]);
+    expect(levelsOf('picture').every((l) => l.mode === 'picture')).toBe(true);
+  });
+
+  it('keep a fixed choice, and flip a coin for "acak"', () => {
+    expect(kindFor('gambar', () => 0.99)).toBe('picture');
+    expect(kindFor('huruf', () => 0)).toBe('letter');
+    expect(kindFor('acak', () => 0.1)).toBe('picture');
+    expect(kindFor('acak', () => 0.9)).toBe('letter');
   });
 
   it('have unique ids', () => {
@@ -86,7 +101,7 @@ describe('choosing the pairs', () => {
   it(`uses only the first ${MEMORI_HIJAIYAH} hijaiyah, so the letters are the early ones`, () => {
     const ids = new Set<string>();
     for (let round = 0; round < 30; round += 1) {
-      for (const p of pairsFor(MEMORI_LEVELS[4], round, 'arab')) if (p.a.kind === 'hijaiyah') ids.add(p.a.letterId);
+      for (const p of pairsFor(MEMORI_LEVELS[5], round, 'arab')) if (p.a.kind === 'hijaiyah') ids.add(p.a.letterId);
     }
     expect(ids.size).toBe(MEMORI_HIJAIYAH);
   });
@@ -254,9 +269,13 @@ describe('turning cards over', () => {
 const card = (i: number) => screen.getByRole('button', { name: new RegExp(`^Kartu ${i + 1}(,|$)`) });
 const faceUp = (i: number) => card(i).getAttribute('data-state') !== 'down';
 
-async function openMemori(user: User) {
+type Choice = 'Gambar' | 'Huruf' | 'Acak';
+
+/** Opens Memori and picks what the pairs are made of (pictures, unless said otherwise). */
+async function openMemori(user: User, choice: Choice = 'Gambar') {
   render(<App />);
   await user.click(screen.getByRole('button', { name: /Memori/ }));
+  await user.click(screen.getByRole('button', { name: choice }));
 }
 
 /** Finds all the pairs of the round on screen. */
@@ -284,6 +303,17 @@ describe('Memori', () => {
         .filter(Boolean);
 
       expect(order).toEqual(titles);
+    });
+
+    it('asks what to play first, out loud, with no cards on the table yet', async () => {
+      const user = setupUser();
+      render(<App />);
+      await user.click(screen.getByRole('button', { name: /Memori/ }));
+
+      expect(screen.getByRole('group', { name: 'Pilih jenis pasangan' })).toBeInTheDocument();
+      for (const name of ['Gambar', 'Huruf', 'Acak']) expect(screen.getByRole('button', { name })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Kartu / })).not.toBeInTheDocument();
+      expect(spokenTexts.join(' ')).toContain('Pilih gambar, huruf, atau acak!');
     });
 
     it('opens on four face-down cards and goes home again', async () => {
@@ -408,35 +438,74 @@ describe('Memori', () => {
       expect(spokenTexts.some((text) => words.includes(text))).toBe(true);
     });
 
-    it('goes on to six cards, then eight, then letters with pictures', async () => {
+    it('in Gambar goes on to six cards, then eight, then round again - and never shows a letter', async () => {
       const user = setupUser();
-      await openMemori(user);
+      await openMemori(user, 'Gambar');
       const sizes: number[] = [];
       for (let round = 0; round < 4; round += 1) {
-        const board = boardFor(round, round);
+        const board = boardFor(round % 3, round);
         sizes.push(screen.getAllByRole('button', { name: /^Kartu / }).length);
         await solve(user, board);
+        for (const c of board.cards) expect(card(c.index).getAttribute('aria-label')).not.toMatch(/huruf/);
         await user.click(screen.getByRole('button', { name: 'Memori berikutnya' }));
       }
 
-      expect(sizes).toEqual([4, 6, 8, 6]);
-      // The fifth round is the last level: four letters, four pictures.
-      expect(screen.getAllByRole('button', { name: /^Kartu / })).toHaveLength(8);
+      expect(sizes).toEqual([4, 6, 8, 4]);
     });
 
-    it('shows letters and pictures in the letter level', async () => {
+    it('in Huruf pairs a letter with its picture from the first round, growing to eight cards', async () => {
       const user = setupUser();
-      await openMemori(user);
+      await openMemori(user, 'Huruf');
+      const sizes: number[] = [];
       for (let round = 0; round < 3; round += 1) {
-        await solve(user, boardFor(round, round));
+        const board = boardFor(3 + round, round);
+        sizes.push(screen.getAllByRole('button', { name: /^Kartu / }).length);
+        await solve(user, board); // matched cards stay face up
+
+        const labels = board.cards.map((_, i) => card(i).getAttribute('aria-label') ?? '');
+        expect(labels.filter((l) => /huruf [A-Z],/.test(l))).toHaveLength(board.cards.length / 2); // a letter for each pair...
+        expect(labels.filter((l) => !/huruf/.test(l))).toHaveLength(board.cards.length / 2); // ...and its picture
         await user.click(screen.getByRole('button', { name: 'Memori berikutnya' }));
       }
-      const board = boardFor(3, 3);
-      await solve(user, board); // matched cards stay face up
 
-      const labels = board.cards.map((_, i) => card(i).getAttribute('aria-label') ?? '');
-      expect(labels.filter((l) => /huruf [A-Z],/.test(l))).toHaveLength(3); // a letter for each pair...
-      expect(labels.filter((l) => !/huruf/.test(l))).toHaveLength(3); // ...and its picture
+      expect(sizes).toEqual([4, 6, 8]);
+    });
+
+    it('in Acak flips a coin for every round, and each kind keeps its own place', async () => {
+      const coin = vi.spyOn(Math, 'random');
+      try {
+        const user = setupUser();
+        coin.mockReturnValue(0.1); // pictures
+        await openMemori(user, 'Acak');
+        const next = () => user.click(screen.getByRole('button', { name: 'Memori berikutnya' }));
+        const count = () => screen.getAllByRole('button', { name: /^Kartu / }).length;
+        const labels = (board: Board) => board.cards.map((c) => card(c.index).getAttribute('aria-label') ?? '').join(' ');
+
+        // Round 0: pictures, the first of their run - four cards.
+        expect(count()).toBe(4);
+        await solve(user, boardFor(0, 0));
+        expect(labels(boardFor(0, 0))).not.toMatch(/huruf/);
+
+        // Round 1: the coin says letters, the first of their own run - four cards, not six.
+        coin.mockReturnValue(0.9);
+        await next();
+        expect(count()).toBe(4);
+        await solve(user, boardFor(3, 1));
+        expect(labels(boardFor(3, 1))).toMatch(/huruf [A-Z],/);
+
+        // Round 2: letters again, the second of their run - six cards.
+        await next();
+        expect(count()).toBe(6);
+        await solve(user, boardFor(4, 2));
+
+        // Round 3: pictures again, but only the second of THEIR run - six cards.
+        coin.mockReturnValue(0.1);
+        await next();
+        expect(count()).toBe(6);
+        expect(card(0).getAttribute('aria-label')).not.toMatch(/huruf/);
+      } finally {
+        coin.mockRestore();
+      }
     });
 
     it('can be shuffled again if the child is stuck', async () => {
@@ -467,6 +536,144 @@ describe('Memori', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    describe('the countdown during the look', () => {
+      const count = () => screen.getByTestId('peek-count');
+
+      it('shows a banner with a number that drops each second, then "Mulai!", then goes quiet', async () => {
+        window.localStorage.removeItem(HINTS_STORAGE_KEY);
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+          const user = setupUser({ advanceTimers: vi.advanceTimersByTime });
+          await openMemori(user);
+          const total = peekSeconds(4);
+
+          expect(screen.getByRole('status')).toHaveTextContent('Lihat dulu!');
+          expect(count()).toHaveTextContent(String(total));
+
+          await act(() => vi.advanceTimersByTimeAsync(1000));
+          expect(count()).toHaveTextContent(String(total - 1));
+
+          await act(() => vi.advanceTimersByTimeAsync((total - 1) * 1000));
+          expect(screen.queryByTestId('peek-count')).not.toBeInTheDocument();
+          expect(screen.getByRole('status')).toHaveTextContent('Mulai!');
+          for (let i = 0; i < 4; i += 1) expect(faceUp(i)).toBe(false);
+
+          await act(() => vi.advanceTimersByTimeAsync(2000));
+          expect(screen.getByRole('status')).not.toHaveTextContent('Mulai!');
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('empties a bar over the whole look', async () => {
+        window.localStorage.removeItem(HINTS_STORAGE_KEY);
+        const user = setupUser();
+        await openMemori(user);
+
+        const bar = screen.getByTestId('peek-banner').querySelector('.animate-peek-shrink') as HTMLElement;
+        expect(bar.style.animationDuration).toBe(`${peekSeconds(4)}s`);
+      });
+
+      it('says "Lihat dulu!" at once - and not the usual instruction over it', async () => {
+        window.localStorage.removeItem(HINTS_STORAGE_KEY);
+        const user = setupUser();
+        await openMemori(user);
+
+        expect(spokenTexts).toContain('Lihat dulu!');
+        expect(spokenTexts).not.toContain('Cari yang sama!');
+      });
+
+      it('speaks the last three seconds and ends with "Mulai!" and the instruction as one phrase', async () => {
+        window.localStorage.removeItem(HINTS_STORAGE_KEY);
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+          const user = setupUser({ advanceTimers: vi.advanceTimersByTime });
+          await openMemori(user); // four cards: four seconds, so 3, 2, 1 are all spoken
+          spokenTexts.length = 0;
+
+          for (const word of ['tiga', 'dua', 'satu']) {
+            await act(() => vi.advanceTimersByTimeAsync(1000));
+            expect(spokenTexts).toContain(word);
+          }
+          await act(() => vi.advanceTimersByTimeAsync(1000));
+          expect(spokenTexts).toContain('Mulai! Cari yang sama!');
+          expect(spokenTexts.indexOf('satu')).toBeLessThan(spokenTexts.indexOf('Mulai! Cari yang sama!'));
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('ticks for the seconds before the last three, and rings twice as the cards turn', async () => {
+        window.localStorage.removeItem(HINTS_STORAGE_KEY);
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+          const user = setupUser({ advanceTimers: vi.advanceTimersByTime });
+          await openMemori(user);
+          await act(() => vi.advanceTimersByTimeAsync(peekMs(4) + 100));
+          await solve(user, boardFor(0, 0)); // still guided: two right guesses is not three
+          await user.click(screen.getByRole('button', { name: 'Memori berikutnya' }));
+
+          // Six cards: five seconds. The first second is a tick, then 3, 2, 1 are spoken.
+          expect(peekSeconds(6)).toBe(5);
+          playedToneCounts.value = 0;
+          await act(() => vi.advanceTimersByTimeAsync(1000));
+          expect(playedToneCounts.value).toBe(1);
+          expect(count()).toHaveTextContent('4');
+
+          await act(() => vi.advanceTimersByTimeAsync(3000));
+          expect(playedToneCounts.value).toBe(1); // spoken, not ticked
+          playedToneCounts.value = 0;
+          await act(() => vi.advanceTimersByTimeAsync(1000));
+          expect(playedToneCounts.value).toBe(2); // the "go" notes
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('counts in Arabic numerals when the script is Arabic', async () => {
+        window.localStorage.removeItem(HINTS_STORAGE_KEY);
+        window.localStorage.setItem('belajar-yuk:script', 'arab');
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+          const user = setupUser({ advanceTimers: vi.advanceTimersByTime });
+          await openMemori(user);
+          expect(count()).toHaveTextContent('٤');
+
+          spokenTexts.length = 0;
+          await act(() => vi.advanceTimersByTimeAsync(1000));
+          expect(count()).toHaveTextContent('٣');
+          expect(spokenTexts).toContain('tsalatsah');
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('is not there for a child who has graduated', async () => {
+        const user = setupUser();
+        await openMemori(user);
+
+        expect(screen.queryByTestId('peek-banner')).not.toBeInTheDocument();
+        expect(spokenTexts).not.toContain('Lihat dulu!');
+        expect(spokenTexts).toContain('Cari yang sama!');
+      });
+
+      it('starts again when the cards are shuffled in the middle of the look', async () => {
+        window.localStorage.removeItem(HINTS_STORAGE_KEY);
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+          const user = setupUser({ advanceTimers: vi.advanceTimersByTime });
+          await openMemori(user);
+          await act(() => vi.advanceTimersByTimeAsync(2000));
+          expect(count()).toHaveTextContent(String(peekSeconds(4) - 2));
+
+          await user.click(screen.getByRole('button', { name: 'Kocok ulang kartu' }));
+          expect(count()).toHaveTextContent(String(peekSeconds(4)));
+        } finally {
+          vi.useRealTimers();
+        }
+      });
     });
 
     it('do not let a card be turned during the peek', async () => {
@@ -607,15 +814,11 @@ describe('Memori', () => {
   });
 
   describe('Arabic', () => {
-    it('pairs a hijaiyah letter with its word card in the letter levels', async () => {
+    it('pairs a hijaiyah letter with its word card in Huruf', async () => {
       window.localStorage.setItem('belajar-yuk:script', 'arab');
       const user = setupUser();
-      await openMemori(user);
-      for (let round = 0; round < 3; round += 1) {
-        await solve(user, boardFor(round, round));
-        await user.click(screen.getByRole('button', { name: 'Memori berikutnya' }));
-      }
-      const board = deal(pairsFor(MEMORI_LEVELS[3], 3, 'arab'), seedFor(MEMORI_LEVELS[3], 3));
+      await openMemori(user, 'Huruf');
+      const board = deal(pairsFor(MEMORI_LEVELS[3], 0, 'arab'), seedFor(MEMORI_LEVELS[3], 0));
       await solve(user, board);
 
       const labels = board.cards.map((c) => card(c.index).getAttribute('aria-label') ?? '').join(' ');
@@ -631,7 +834,7 @@ describe('Memori', () => {
       expect(home()).toHaveAttribute('data-locked', 'true');
 
       for (let round = 0; round < UNLOCK_AFTER_GAMES; round += 1) {
-        await solve(user, boardFor(round % MEMORI_LEVELS.length, round));
+        await solve(user, boardFor(round % 3, round));
         if (round < UNLOCK_AFTER_GAMES - 1) await user.click(screen.getByRole('button', { name: 'Memori berikutnya' }));
       }
       expect(home()).not.toHaveAttribute('data-locked');

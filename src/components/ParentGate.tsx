@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Check, Delete, ShieldQuestion } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Delete, Keyboard, ShieldQuestion } from 'lucide-react';
 import { useSwallowGameKeys } from '../hooks/useSwallowGameKeys';
 
 type ParentGateProps = {
@@ -20,21 +20,40 @@ function newSum(random: () => number = Math.random): { a: number; b: number } {
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
 
+/** Is a mouse or trackpad the main pointer, as on a computer? A phone or tablet is "coarse". */
+function hasFinePointer(): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(pointer: fine)').matches
+    : false;
+}
+
 /**
  * A small sum that stands between a toddler and a way out of the game.
  *
  * It is not security - it only has to be something a three-year-old cannot do
  * and a parent can do without thinking. The answer takes two digits, so
- * mashing keys at random almost never passes. A wrong answer drops straight
- * back to the game: no second try on the same sum, no scolding.
+ * mashing keys at random almost never passes.
+ *
+ * There is no "check" button: the moment the last digit goes in the answer is
+ * judged. Right, and the grown-up is out; wrong, and it drops straight back to
+ * the game - no second try on the same sum, no scolding.
+ *
+ * The digits can be tapped on the pad or, on a computer, typed. It listens to
+ * the keyboard itself rather than owning a text field, so a phone never pulls
+ * up its on-screen keyboard over the pad.
  *
  * It is silent. A spoken sum would draw the child's attention to the very
  * thing meant to be out of their way.
  */
 export function ParentGate({ onPass, onCancel }: ParentGateProps) {
   const [{ a, b }] = useState(() => newSum());
+  const answer = String(a + b);
   const [typed, setTyped] = useState('');
   const dialogRef = useRef<HTMLDivElement>(null);
+  // The latest answer typed, for keys that arrive faster than React renders.
+  const typedRef = useRef('');
+  // Once judged the gate is over: a stray key in the same tick must not judge it twice.
+  const judged = useRef(false);
 
   useSwallowGameKeys();
 
@@ -42,19 +61,46 @@ export function ParentGate({ onPass, onCancel }: ParentGateProps) {
     dialogRef.current?.focus();
   }, []);
 
+  const press = useCallback(
+    (digit: string) => {
+      if (judged.current || typedRef.current.length >= answer.length) return;
+      const next = typedRef.current + digit;
+      typedRef.current = next;
+      setTyped(next);
+
+      if (next.length === answer.length) {
+        judged.current = true;
+        if (next === answer) onPass();
+        else onCancel();
+      }
+    },
+    [answer, onCancel, onPass],
+  );
+
+  const erase = useCallback(() => {
+    if (judged.current) return;
+    typedRef.current = typedRef.current.slice(0, -1);
+    setTyped(typedRef.current);
+  }, []);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCancel();
+      if (event.key === 'Escape') {
+        onCancel();
+        return;
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+      if (/^[0-9]$/.test(event.key)) {
+        event.preventDefault();
+        press(event.key);
+      } else if (event.key === 'Backspace' || event.key === 'Delete') {
+        event.preventDefault();
+        erase();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel]);
-
-  const press = (digit: string) => setTyped((t) => (t.length < 2 ? t + digit : t));
-  const submit = () => {
-    if (typed !== '' && Number(typed) === a + b) onPass();
-    else onCancel();
-  };
+  }, [erase, onCancel, press]);
 
   const keyClass =
     'flex h-16 items-center justify-center rounded-2xl bg-slate-100 text-3xl font-black text-slate-800 shadow ring-1 ring-slate-300 outline-none hover:bg-slate-200 focus-visible:ring-4 focus-visible:ring-sky-500 active:scale-95';
@@ -90,26 +136,20 @@ export function ParentGate({ onPass, onCancel }: ParentGateProps) {
               {digit}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => setTyped((t) => t.slice(0, -1))}
-            aria-label="Hapus"
-            className={keyClass}
-          >
+          <button type="button" onClick={erase} aria-label="Hapus" className={keyClass}>
             <Delete aria-hidden="true" className="size-7" strokeWidth={2.4} />
           </button>
-          <button type="button" onClick={() => press('0')} className={keyClass}>
+          <button type="button" onClick={() => press('0')} className={`${keyClass} col-span-2`}>
             0
           </button>
-          <button
-            type="button"
-            onClick={submit}
-            aria-label="Periksa jawaban"
-            className="flex h-16 items-center justify-center rounded-2xl bg-emerald-700 text-white shadow outline-none hover:bg-emerald-800 focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95"
-          >
-            <Check aria-hidden="true" className="size-8" strokeWidth={3} />
-          </button>
         </div>
+
+        {hasFinePointer() && (
+          <p className="flex items-center justify-center gap-2 text-sm font-semibold text-slate-600">
+            <Keyboard aria-hidden="true" className="size-5" strokeWidth={2.2} />
+            Bisa juga diketik dengan papan ketik.
+          </p>
+        )}
 
         <button
           type="button"

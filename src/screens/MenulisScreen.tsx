@@ -1,13 +1,13 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
-import { Eye, Hash, RotateCcw, Type } from 'lucide-react';
+import { Binary, CaseLower, Eye, Hash, Languages, RotateCcw, Type } from 'lucide-react';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { Celebration } from '../components/Celebration';
 import { ModeChooser } from '../components/ModeChooser';
 import type { ModeChoice } from '../components/ModeChooser';
 import { IconButton, NextButton } from '../components/RoundButtons';
-import { dueForReview, recordResult, reviewOrder } from '../data/review';
-import { begin, drag, glyphOf, glyphsFor, inkUpTo, lift, newTrace, pathD, pointAt } from '../data/tracing';
+import { LOWERCASE_LINES } from '../data/glyphsLatin';
+import { DOT_LENGTH, begin, drag, glyphOf, glyphsFor, inkUpTo, isArabicKind, lift, newTrace, pathD, pointAt } from '../data/tracing';
 import type { Pt, Trace, TraceEvent, TraceKind } from '../data/tracing';
 import { CHEER_PROSODY } from '../audio/voice';
 import { useAudio } from '../hooks/useAudio';
@@ -25,12 +25,30 @@ const HELP_MS = 4000;
 
 const CHOICES: ModeChoice<TraceKind>[] = [
   { id: 'letters', title: 'Huruf', glyph: 'A B C', icon: Type, theme: 'from-rose-500 to-red-600' },
+  { id: 'lowercase', title: 'Huruf kecil', glyph: 'a b c', icon: CaseLower, theme: 'from-orange-500 to-amber-600' },
   { id: 'numbers', title: 'Angka', glyph: '1 2 3', icon: Hash, theme: 'from-sky-600 to-blue-700' },
+  { id: 'hijaiyah', title: 'Hijaiyah', glyph: 'ا ب ت', icon: Languages, theme: 'from-emerald-600 to-teal-700' },
+  { id: 'arabicNumbers', title: 'Angka Arab', glyph: '١ ٢ ٣', icon: Binary, theme: 'from-violet-600 to-purple-700' },
 ];
 
-const INK: Record<TraceKind, string> = { letters: '#e11d48', numbers: '#0369a1' };
+const INK: Record<TraceKind, string> = {
+  letters: '#e11d48',
+  lowercase: '#c2410c',
+  numbers: '#0369a1',
+  hijaiyah: '#047857',
+  arabicNumbers: '#7c3aed',
+};
 
-const keyFor = (kind: TraceKind, glyph: string) => `menulis:${kind}:${glyph}`;
+/** What a glyph of each kind is called in the caption and for assistive tech. */
+const NOUN: Record<TraceKind, string> = {
+  letters: 'huruf',
+  lowercase: 'huruf kecil',
+  numbers: 'angka',
+  hijaiyah: 'huruf hijaiyah',
+  arabicNumbers: 'angka Arab',
+};
+
+const capitalise = (text: string) => `${text[0].toUpperCase()}${text.slice(1)}`;
 
 /** Is the child's device set to reduce motion? Then nothing on the board moves by itself. */
 function prefersReducedMotion(): boolean {
@@ -42,10 +60,12 @@ function prefersReducedMotion(): boolean {
 /**
  * Menulis - trace a letter or a number with a finger.
  *
- * First a letter or a number is chosen. Then one glyph at a time: a grey guide,
- * a dot where to start, and ink that follows the finger as long as it stays on
- * the line. See data/tracing.ts for the rules; they are very forgiving, and a
- * finger that wanders off simply stops drawing.
+ * First the kind is chosen: capitals, small letters, numbers, hijaiyah or Arabic
+ * numerals. Then one glyph at a time, always in order - A to Z, a to z, 0 to 9,
+ * alif to ya, ٠ to ٩ - and round again at the end: a grey guide, a dot where to
+ * start, and ink that follows the finger as long as it stays on the line. See
+ * data/tracing.ts for the rules; they are very forgiving, and a finger that
+ * wanders off simply stops drawing.
  *
  * A child who is new to it - or finding it hard - also gets a small dot that
  * travels the stroke ahead of them, "follow me". It goes once they have traced
@@ -64,7 +84,8 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
   /** What the child chose; null while they are still choosing. */
   const [kind, setKind] = useState<TraceKind | null>(null);
   const [round, setRound] = useState(0);
-  const [place, setPlace] = useState({ index: 0, sequential: 0 });
+  /** Where in the list of glyphs of this kind: it only ever goes one on. */
+  const [index, setIndex] = useState(0);
   /** Bumped on a reset, so the same glyph starts clean. */
   const [attempt, setAttempt] = useState(0);
 
@@ -79,9 +100,13 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
   // The "follow me" dot, after a wander or when asked for; it goes back to rest by itself.
   const [help, setHelp] = useFlash(false, HELP_MS);
   const svgRef = useRef<SVGSVGElement>(null);
+  // Where the board is on the screen, measured when a finger goes down: it does
+  // not move while it is being drawn on, and measuring it on every movement is
+  // what makes a pen stutter.
+  const boardRect = useRef<DOMRect | null>(null);
   const named = useRef(false);
 
-  const glyphId = kind === null ? null : glyphsFor(kind)[place.index];
+  const glyphId = kind === null ? null : glyphsFor(kind)[index];
   const glyph = useMemo(() => (glyphId === null ? null : glyphOf(glyphId)), [glyphId]);
   // The guide never changes while a glyph is on screen, and the finger moves
   // many times a second: build each stroke's path once, not on every movement.
@@ -113,21 +138,22 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
       playTap();
       setKind(picked);
       setRound(0);
-      setPlace({ index: 0, sequential: 0 });
+      setIndex(0);
       clear();
     },
     [clear, playTap],
   );
 
+  // Always the next one in the list, and back to the first after the last: a
+  // child learning their letters is taught them in order, so nothing is skipped
+  // over or brought back early.
   const handleNext = useCallback(() => {
     if (kind === null) return;
     playTap();
-    const list = glyphsFor(kind);
-    const weak = dueForReview(`menulis:${kind}:`).map((k) => k.split(':').pop());
-    setPlace((p) => reviewOrder(list.length, p.sequential, round + 1, (i) => weak.includes(list[i])));
+    setIndex((i) => (i + 1) % glyphsFor(kind).length);
     setRound((r) => r + 1);
     clear();
-  }, [clear, kind, playTap, round]);
+  }, [clear, kind, playTap]);
 
   const handleReset = useCallback(() => {
     playTap();
@@ -144,13 +170,11 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
   /* The finger                                                        */
   /* ---------------------------------------------------------------- */
 
-  /** A pointer position in board coordinates (0-100). */
-  const toBoard = (event: PointerEvent): Pt | null => {
-    const svg = svgRef.current;
-    if (!svg) return null;
-    const rect = svg.getBoundingClientRect();
-    if (!rect.width || !rect.height) return null;
-    return { x: ((event.clientX - rect.left) / rect.width) * 100, y: ((event.clientY - rect.top) / rect.height) * 100 };
+  /** A screen position in board coordinates (0-100), by the board as it was when the finger went down. */
+  const toBoard = (clientX: number, clientY: number): Pt | null => {
+    const rect = boardRect.current ?? svgRef.current?.getBoundingClientRect() ?? null;
+    if (!rect || !rect.width || !rect.height) return null;
+    return { x: ((clientX - rect.left) / rect.width) * 100, y: ((clientY - rect.top) / rect.height) * 100 };
   };
 
   const react = useCallback(
@@ -173,14 +197,12 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
         case 'stroke':
           playPop();
           record(event.clean);
-          recordResult(keyFor(kind, glyphId), event.clean);
           setHelp(false);
           break;
         case 'glyph':
           playPop();
           playChime();
           record(event.clean);
-          recordResult(keyFor(kind, glyphId), event.clean);
           playVoice([...stepsFor([{ ...name, text: `${name.text}!` }], CHEER_PROSODY), praiseStep()]);
           break;
         case 'none':
@@ -192,7 +214,8 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
 
   const onDown = (event: PointerEvent<SVGSVGElement>) => {
     if (glyph === null) return;
-    const p = toBoard(event);
+    boardRect.current = event.currentTarget.getBoundingClientRect();
+    const p = toBoard(event.clientX, event.clientY);
     if (!p) return;
     try {
       event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -207,15 +230,28 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
 
   const onMove = (event: PointerEvent<SVGSVGElement>) => {
     if (glyph === null || !traceRef.current.down) return;
-    const p = toBoard(event);
-    if (!p) return;
-    const before = traceRef.current;
-    const step = drag(glyph, before, p);
-    setTrace(step.trace);
-    react(step.event, before);
+
+    // A screen delivers a finger's path in fewer, bigger steps than it was
+    // really drawn in; the browser keeps the ones in between. Following all of
+    // them is what keeps a quick stroke from falling behind the ink.
+    const path = event.nativeEvent.getCoalescedEvents?.() ?? [];
+    const moves = path.length > 0 ? path : [event.nativeEvent];
+
+    let latest = traceRef.current;
+    for (const move of moves) {
+      const p = toBoard(move.clientX, move.clientY);
+      if (!p) continue;
+      const step = drag(glyph, latest, p);
+      react(step.event, latest);
+      latest = step.trace;
+    }
+    if (latest !== traceRef.current) setTrace(latest);
   };
 
-  const onUp = () => setTrace(lift(traceRef.current));
+  const onUp = () => {
+    boardRect.current = null;
+    setTrace(lift(traceRef.current));
+  };
 
   /* ---------------------------------------------------------------- */
   /* Choosing                                                          */
@@ -233,7 +269,8 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
   /* Tracing                                                           */
   /* ---------------------------------------------------------------- */
 
-  const noun = kind === 'letters' ? 'huruf' : 'angka';
+  const noun = NOUN[kind];
+  const arabic = isArabicKind(kind);
   const ink = INK[kind];
   const current = glyph.strokes[Math.min(trace.stroke, glyph.strokes.length - 1)];
   const start = pointAt(current, trace.progress);
@@ -247,7 +284,14 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
       onRepeat={repeat}
       caption={done ? 'Bagus sekali!' : `Telusuri ${noun} ${glyphId}`}
     >
-      {done && <Celebration key={`${round}-${attempt}`} headline={glyphId} subline={`${noun[0].toUpperCase()}${noun.slice(1)} ${glyphId}!`} />}
+      {done && (
+        <Celebration
+          key={`${round}-${attempt}`}
+          headline={glyphId}
+          headlineLang={arabic ? 'ar' : undefined}
+          subline={`${capitalise(noun)} ${glyphId}!`}
+        />
+      )}
 
       <div className="flex w-full max-w-md flex-col items-center gap-5">
         <svg
@@ -264,6 +308,15 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
           onPointerCancel={onUp}
           className="aspect-square w-full touch-none rounded-[2.5rem] bg-white shadow-xl ring-4 ring-slate-200 select-none"
         >
+          {/* The lines of a copybook, for small letters: where they stand and how tall they are. */}
+          {kind === 'lowercase' && (
+            <g data-testid="copybook-lines" aria-hidden="true" strokeWidth={0.7}>
+              <line x1={0} x2={100} y1={LOWERCASE_LINES.top} y2={LOWERCASE_LINES.top} stroke="#e2e8f0" />
+              <line x1={0} x2={100} y1={LOWERCASE_LINES.middle} y2={LOWERCASE_LINES.middle} stroke="#fda4af" strokeDasharray="2 2" />
+              <line x1={0} x2={100} y1={LOWERCASE_LINES.base} y2={LOWERCASE_LINES.base} stroke="#94a3b8" />
+            </g>
+          )}
+
           {/* The guide: every stroke, in grey. */}
           {guidePaths.map((d, i) => (
             <path key={`guide-${i}`} d={d} fill="none" stroke="#cbd5e1" strokeWidth={13} strokeLinecap="round" strokeLinejoin="round" />
@@ -280,8 +333,18 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
 
           {!done && (
             <>
-              {/* Where to put the finger: the start dot, or where the ink ended. */}
-              <circle cx={start.x} cy={start.y} r={6.5} fill="#fbbf24" stroke="#1e293b" strokeWidth={1.8} className="animate-pulse" data-testid="start-dot" />
+              {/* Where to put the finger: the start dot, or where the ink ended. It holds
+                  still while a finger is on it: a pulsing dot under the pen looks like a flicker. */}
+              <circle
+                cx={start.x}
+                cy={start.y}
+                r={6.5}
+                fill="#fbbf24"
+                stroke="#1e293b"
+                strokeWidth={1.8}
+                className={trace.down ? undefined : 'animate-pulse'}
+                data-testid="start-dot"
+              />
               {glyph.strokes.length > 1 && (
                 <text x={start.x} y={start.y + 2.6} textAnchor="middle" fontSize={7} fontWeight={900} fill="#1e293b" aria-hidden="true">
                   {trace.stroke + 1}
@@ -289,7 +352,7 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
               )}
 
               {/* "Follow me": a dot that travels the stroke ahead of the child. */}
-              {showFollow && (
+              {showFollow && current.length > DOT_LENGTH && (
                 <circle r={4} fill="#0ea5e9" stroke="#ffffff" strokeWidth={1.5} data-testid="follow-dot">
                   <animateMotion
                     key={`${trace.stroke}-${Math.round(trace.progress / 10)}`}
@@ -303,13 +366,17 @@ export function MenulisScreen({ onHome, letterLang }: { onHome: () => void; lett
           )}
         </svg>
 
+        {arabic && !done && (
+          <p className="text-sm font-bold text-slate-600">Bahasa Arab ditulis dari kanan ke kiri.</p>
+        )}
+
         <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
           <IconButton label="Tunjukkan caranya" icon={Eye} tone="help" onClick={() => once('demo', handleDemo)} />
 
           {inked && <IconButton label="Ulangi menulis" icon={RotateCcw} onClick={() => once('reset', handleReset)} />}
 
           <NextButton
-            label={done ? `${noun[0].toUpperCase()}${noun.slice(1)} berikutnya` : 'Lewati, berikutnya'}
+            label={done ? `${capitalise(noun)} berikutnya` : 'Lewati, berikutnya'}
             ready={done}
             onClick={() => once('next', handleNext)}
           />

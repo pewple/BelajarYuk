@@ -285,6 +285,7 @@ describe('a child who is struggling', () => {
       const user = setupUser({ advanceTimers: vi.advanceTimersByTime });
       render(<App />);
       await user.click(screen.getByRole('button', { name: /Memori/ }));
+      await user.click(screen.getByRole('button', { name: 'Gambar' }));
 
       const board = deal(pairsFor(MEMORI_LEVELS[0], 0), seedFor(MEMORI_LEVELS[0], 0));
       const stranger = board.cards.find((c) => c.pair !== board.cards[0].pair)!.index;

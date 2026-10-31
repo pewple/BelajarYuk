@@ -56,10 +56,26 @@ describe('the Arabic word deck', () => {
     const card = ARABIC_WORD_CARDS[0];
     expect(arabicWordPart(card)).toEqual({
       clip: 'words/ar/alif',
-      text: 'arnab',
-      native: { text: 'أَرْنَب', lang: 'ar-SA' },
+      text: 'arnabun',
+      native: { text: 'أَرْنَبٌ', lang: 'ar-SA' },
     });
-    expect(stepsFor([arabicWordPart(card)])[0]).toMatchObject({ kind: 'tts', text: 'arnab' });
+    expect(stepsFor([arabicWordPart(card)])[0]).toMatchObject({ kind: 'tts', text: 'arnabun' });
+  });
+
+  it('gives every word the "-un" of an indefinite noun, in the letters and in the reading', () => {
+    const DAMMATAN = 'ٌ';
+    for (const card of ARABIC_WORD_CARDS) {
+      expect(card.word.endsWith(DAMMATAN), `${card.letterId}: ${card.word}`).toBe(true);
+      expect(card.say, card.letterId).toMatch(/un$/);
+      expect(card.translit.toLowerCase(), card.letterId).toMatch(/un$/);
+    }
+  });
+
+  it('says a word that ends in a round ta as "-atun"', () => {
+    for (const id of ['zai', 'ghoin', 'ha-2']) {
+      const card = ARABIC_WORD_CARDS.find((c) => c.letterId === id)!;
+      expect(card.say, id).toMatch(/atun$/);
+    }
   });
 
   it('can be recorded and illustrated, each card under its own letter\'s name', () => {

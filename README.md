@@ -7,7 +7,7 @@ bentuk berwarna), **Memori** (mencari pasangan kartu), **Labirin** (mengikuti ur
 huruf atau angka sampai ke tujuan), dan **Kasir** (menghitung uang kembalian selangkah
 demi selangkah). Huruf dan angka bisa ditulis Latin atau Arab (hijaiyah).
 
-Nomor versi (`v1.1.0`, dari `package.json`) tampil kecil di pojok kanan atas setiap
+Nomor versi (`v1.2.0`, dari `package.json`) tampil kecil di pojok kanan atas setiap
 halaman. Di bawah layar utama ada catatan singkat untuk orang tua: aplikasi bisa dipasang
 dan dibuka tanpa internet, berjalan hanya di perangkat ini, **tanpa cookie**, tanpa akun,
 tanpa pelacak, dan tidak mengirim data ke mana pun (pengaturan dan catatan belajar disimpan
@@ -132,9 +132,13 @@ src/
   data/navigation.ts       Pilihan di layar utama
   data/pola.ts             Bentuk, tingkat pola, dan cara membuat satu ronde
   data/memori.ts           Aturan Memori: memilih pasangan, mengocok, membalik kartu
-  data/tracing.ts          Garis huruf/angka (A-Z, 0-9) dan aturan mengikuti garis dengan jari
-  media/memoriVoice.ts     "Cari yang sama!", nama tiap kartu
-  media/menulisVoice.ts    "Ikuti garisnya!", "Pilih huruf atau angka!"
+  data/tracing.ts          Aturan mengikuti garis dengan jari, dan daftar yang bisa ditelusuri
+  data/glyphsLatin.ts      Garis huruf besar, huruf kecil, dan angka
+  data/glyphsArabic.ts     Garis huruf hijaiyah dan angka Arab (perlu diperiksa penulis Arab)
+  data/strokeDsl.ts        Bahasa kecil untuk menggambar goresan (M, L, C, A, dot)
+  dev/glyph-sheet.html     Lembar uji bentuk untuk pengembang (hanya di `npm run dev`)
+  media/memoriVoice.ts     "Pilih gambar, huruf, atau acak!", "Lihat dulu!", "Mulai!", nama tiap kartu
+  media/menulisVoice.ts    "Ikuti garisnya!", "Pilih huruf atau angka!", nama tiap huruf/angka
   components/VersionBadge  Nomor versi di pojok kanan atas
   components/AppNotice     Catatan PWA dan privasi di layar utama
   data/arabicWords.ts      Dek kata Arab (28 huruf, satu kata tiap huruf)
@@ -151,7 +155,7 @@ src/
   data/hints.ts            Petunjuk yang memudar (aturan murni)
   data/review.ts           Tangga ulangan berjarak (Leitner)
   state/play.tsx           Hitungan permainan per modul -> gerbang tombol rumah
-  components/ParentGate    Soal penjumlahan untuk orang tua
+  components/ParentGate    Soal penjumlahan untuk orang tua (dinilai otomatis, bisa diketik)
   components/RestBreak     Layar istirahat setelah 15 menit
   components/ScriptToggle  Tombol "ABC | ابت"
   media/manifest.ts        Membaca media/manifest.js saat aplikasi berjalan
@@ -306,9 +310,11 @@ language › Arabic › Language options › Speech; Android dan iOS umumnya sud
 Muat ulang halaman setelahnya.
 
 **Belajar Bicara punya dek Arab sendiri**: 28 kartu, satu kata sehari-hari untuk tiap
-huruf hijaiyah (أَرْنَب kelinci, بَاب pintu, تُفَّاح apel …), ditulis dengan harakat dan
+huruf hijaiyah (أَرْنَبٌ kelinci, بَابٌ pintu, تُفَّاحٌ apel …), ditulis dengan harakat dan
 dibacakan dengan suara Arab (atau ejaan Indonesia bila tak ada), lengkap dengan bacaan
-Latin dan artinya untuk orang tua. Katanya diambil dari daftar awal yang Anda berikan;
+Latin dan artinya untuk orang tua. Setiap kata berakhiran **-un** (tanwin dhammah, ٌ):
+arnabun, babun, tuffahun … ; kata yang berakhir ta marbutah dibaca **-atun** (زَهْرَةٌ
+zahratun, غَابَةٌ ghabatun, هَدِيَّةٌ hadiyyatun). Katanya diambil dari daftar awal yang Anda berikan;
 bila ada dua kata untuk satu huruf dipilih yang gambarnya mudah dikenali (أَرْنَب, bukan
 أَسَد; لَيْمُون, bukan لَعِب). Gambarnya ikon lucide; empat kata yang tak punya ikon
 (keju, roti, beruang, emas) digambar sendiri di `components/drawnIcons.ts`. Semuanya bisa
@@ -321,8 +327,13 @@ dimatikan (hanya ada satu cara baca).
 **Gerbang orang tua pada tombol rumah.** Di dalam permainan, tombol rumah awalnya
 abu-abu dengan gembok kecil. Mengetuknya memunculkan soal penjumlahan (mis. `7 + 6`)
 dengan papan angka; jawabannya dua angka, jadi menekan asal hampir tak pernah lolos.
-Salah, kosong, atau ketuk "Kembali bermain" = langsung kembali ke permainan, tanpa
-hukuman. Benar = pulang. Setelah **5 permainan selesai di modul itu** tombol berubah
+**Tidak ada tombol centang**: begitu angka terakhir masuk, jawabannya langsung dinilai.
+Benar = pulang; salah (atau ketuk "Kembali bermain", atau Esc) = langsung kembali ke
+permainan, tanpa hukuman dan tanpa percobaan kedua pada soal yang sama. Di komputer
+jawabannya juga bisa **diketik dengan papan ketik** (angka 0-9, Backspace untuk menghapus,
+Esc untuk batal); soal itu tidak memakai kolom isian, jadi di ponsel/tablet papan ketik
+layar tidak muncul menutupi papan angka, dan petunjuk "bisa diketik" hanya tampil bila
+perangkat punya tetikus atau trackpad. Setelah **5 permainan selesai di modul itu** tombol berubah
 normal dan tak lagi digembok. Satu "permainan" = satu ronde Berhitung selesai, satu
 labirin selesai, satu pembeli dilayani, satu pola, satu pasangan kartu Memori selesai, satu huruf
 Menulis selesai, atau (di Mengenal Huruf dan Belajar Bicara) satu kartu *berbeda* yang
@@ -421,12 +432,23 @@ petunjuk yang memudar (3 benar → lepas, 2 salah → kembali), kunci ketukan ga
 lisan sekali + ulang, dan ulangan berjarak (tingkat yang salah muncul lagi tiap ronde
 ketiga). Warna bisa direkam di `colors/merah.mp3` dan seterusnya.
 
-**Menulis: menelusuri huruf dan angka.** Pertama dipilih **Huruf** atau **Angka**. Lalu satu
+**Menulis: menelusuri huruf dan angka.** Pertama dipilih apa yang ditulis: **Huruf** (A-Z),
+**Huruf kecil** (a-z), **Angka** (0-9), **Hijaiyah** (ا … ي) atau **Angka Arab** (٠ … ٩). Lalu satu
 per satu: papan putih dengan garis abu-abu sebagai pemandu, **titik kuning** tempat mulai
 (bernomor bila hurufnya punya beberapa goresan), dan tinta berwarna yang mengikuti jari
 selama jari tetap di garis. Goresan mengikuti urutan dan arah yang diajarkan di sekolah:
-atas ke bawah, kiri ke kanan, bentuk bulat berlawanan arah jarum jam dari atas. Huruf A–Z
-dan angka 1–9 lalu 0.
+atas ke bawah, kiri ke kanan, bentuk bulat berlawanan arah jarum jam dari atas; huruf Arab
+dimulai dari ujung kanan, badannya dulu baru titiknya.
+
+**Selalu berurutan.** A sampai Z, a sampai z, 0 sampai 9, alif sampai ya, ٠ sampai ٩ — lalu
+kembali ke awal. "Lanjut" selalu membawa ke yang berikutnya; huruf yang salah tidak "dibawa
+lagi" lebih awal dan Menulis tidak lagi memakai ulangan berjarak, supaya urutan belajarnya
+tidak berloncatan.
+
+**Pena yang halus.** Tinta ditaruh tepat di bawah jari (jarak ke garis dihitung sampai
+pecahan satuan, bukan loncat dari titik ke titik), setiap titik yang dilewati jari cepat ikut
+diperhitungkan (`getCoalescedEvents`), papan hanya diukur sekali saat jari turun, dan titik
+kuning berhenti berkedip selama jari menyentuhnya.
 
 Aturannya sengaja sangat longgar (`data/tracing.ts`): koridor 13 satuan dari garis (papan
 100 × 100), jadi jari kecil yang goyang tetap menggambar. Jari yang keluar garis cuma
@@ -441,25 +463,55 @@ sorakan lalu pujian. Tombol mata (**Tunjukkan caranya**) memutar titik pemandu k
 Petunjuk memudar seperti permainan lain: anak baru melihat titik biru yang berjalan di
 depan jarinya sepanjang goresan; setelah **3 goresan bersih berturut-turut** titik itu hilang
 (kecuali diminta), dan setelah **2 goresan yang melenceng** muncul lagi. Huruf yang goresannya
-melenceng dicatat di ulangan berjarak dan muncul lagi tiap huruf ketiga. Titik pemandu tidak
-bergerak sendiri bila perangkat memilih "kurangi gerak". Tombol ABC/ابت tidak ada di sini:
-yang digambar selalu huruf Latin dan angka biasa.
+melenceng mengembalikan petunjuk, tetapi **tidak** mengubah urutan (lihat di atas). Titik
+pemandu tidak bergerak sendiri bila perangkat memilih "kurangi gerak". Tombol ABC/ابت tidak
+ada di sini: huruf Arab punya pilihan sendiri di layar pertama.
 
-*Belum ada:* menelusuri huruf hijaiyah dan angka ١–٩. Bentuknya bersambung, bertitik, dan
-urutan goresannya punya aturan sendiri; garisnya sebaiknya dibuat atau diperiksa oleh orang
-yang menulis Arab, bukan ditebak.
+**Bentuk garisnya.** Semuanya ada di `data/glyphsLatin.ts` dan `data/glyphsArabic.ts`
+(bahasa kecil di `data/strokeDsl.ts`: `M` mulai, `L` garis, `C` kurva, `A` busur, `dot` titik).
+Huruf kecil berdiri di atas garis buku tulis (garis dasar dan garis tengah digambar di
+belakang papan), huruf tinggi naik sampai garis atas dan g j p q y turun di bawahnya. **Titik**
+(di atas i dan j, atau titik huruf Arab) adalah goresan yang sangat pendek: cukup disentuh.
+Angka 6 turun di sisi kiri lalu terus melingkar penuh sampai bertemu batangnya; angka 8
+satu goresan tertutup (atas berlawanan arah jarum jam, pinggang, bawah searah jarum jam,
+lalu naik lagi menutup atas).
+
+**Lembar uji bentuk.** `npm run dev` lalu buka `/src/dev/glyph-sheet.html`: menggambar setiap
+glyph seperti di Menulis (jalur abu-abu, garis tengah, nomor goresan, ujung merah). Untuk
+huruf Arab, huruf asli dari font perangkat digambar biru muda di belakangnya, dan
+`?skel=1` menambahkan garis tengah hasil penipisan huruf itu (titik merah kecil) sebagai
+pembanding. Parameter lain: `?kind=hijaiyah`, `?ids=بتث`, `?size=260`, `?font=only`.
+
+*Perlu diperiksa orang yang menulis Arab:* garis huruf hijaiyah dan angka Arab dibuat
+tangan mengikuti font Arab sistem dan hanya diperiksa dengan mata terhadap font itu —
+bentuk tegak ala buku Iqra', bukan kaligrafi. Urutan goresan dan arah (kanan ke kiri,
+badan huruf dulu lalu titiknya) mengikuti kebiasaan umum, tetapi belum dicek penulis Arab.
+Bentuk yang paling perlu dilihat: ه (dua lobus), ع/غ, ك, ص/ض, ط/ظ, dan angka ٣. Koreksi cukup
+mengubah angka di `glyphsArabic.ts`; tes menjaga jumlah titik tiap huruf dan arahnya.
 
 **Memori: mencari pasangan.** Kartu tertelungkup. Anak membalik satu, lalu satu lagi:
 pasangan tetap terbuka (hijau, dengan tanda "sudah cocok"); yang tidak cocok tetap terlihat
 1,8 detik lalu menutup lagi — selama itu kartu lain tidak bisa dibalik. Posisi kartu tidak
 pernah berpindah dalam satu ronde. Setiap kartu yang dibalik mengucapkan namanya ("Apel",
-"a"). Tingkatnya: 4, 6, lalu 8 kartu dengan **gambar yang sama**, kemudian **huruf dengan
-gambar yang berawalan huruf itu** (A dan apel — hubungan yang diajarkan Belajar Bicara; di
-mode Arab: huruf hijaiyah dan kartu katanya).
+"a").
 
-Anak baru mendapat dua bantuan: semua kartu **dibuka sebentar** (±4–5 detik) sebelum
+Pertama dipilih jenis pasangannya (diucapkan: "Pilih gambar, huruf, atau acak!"):
+**Gambar** — dua gambar yang sama; **Huruf** — huruf dengan gambar yang berawalan huruf itu
+(A dan apel — hubungan yang diajarkan Belajar Bicara; di mode Arab: huruf hijaiyah dan kartu
+katanya); **Acak** — undian untuk setiap ronde. Tiap jenis punya tingkatnya sendiri: 4, 6, lalu
+8 kartu, lalu mengulang; di Acak, tiap jenis hanya maju bila dimainkan.
+
+Anak baru mendapat dua bantuan: semua kartu **dibuka sebentar** (4–5 detik) sebelum
 ditutup, dan setelah salah tebak **pasangan yang dicari menyala**. Keduanya hilang setelah
-3 tebakan benar berturut-turut dan kembali setelah 2 salah. Pasangan yang pernah salah
+3 tebakan benar berturut-turut dan kembali setelah 2 salah.
+
+Waktu membuka kartu itu **dihitung mundur** supaya anak tidak kaget: pita "Lihat dulu!" dengan
+angka besar yang turun tiap detik dan bilah yang mengosong (bilah tidak tampil bila perangkat
+memilih "kurangi gerak"); suaranya "Lihat dulu!" di awal, satu *tik* tiap detik, tiga detik
+terakhir diucapkan ("tiga, dua, satu", atau Arab bila tulisan Arab), lalu dua nada naik dan
+"Mulai! Cari yang sama!" saat kartu menutup, dengan tulisan "Mulai!" sebentar. Anak yang
+sudah lulus tidak mendapat hitung mundur ini. Rekaman sendiri: `phrases/lihat-dulu`,
+`phrases/mulai`, `ui/hitung-mundur`, `ui/mulai`, `memori/gambar`. Pasangan yang pernah salah
 dicatat (ulangan berjarak) dan dimasukkan lebih dulu ke ronde berikutnya. Tombol *Kocok
 ulang* mengocok lagi ronde yang sama.
 

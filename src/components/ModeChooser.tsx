@@ -25,8 +25,19 @@ type ModeChooserProps<T extends string> = {
  * and for a screen reader.
  */
 export function ModeChooser<T extends string>({ label, choices, onChoose }: ModeChooserProps<T>) {
+  // Two or three choices get the whole width; more than that wrap into rows.
+  const many = choices.length > 3;
+
   return (
-    <div role="group" aria-label={label} className="flex w-full max-w-2xl flex-col gap-4 sm:flex-row">
+    <div
+      role="group"
+      aria-label={label}
+      className={
+        many
+          ? 'grid w-full max-w-2xl grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4'
+          : 'flex w-full max-w-2xl flex-col gap-4 sm:flex-row'
+      }
+    >
       {choices.map((choice) => {
         const Icon = choice.icon;
         return (
@@ -34,13 +45,18 @@ export function ModeChooser<T extends string>({ label, choices, onChoose }: Mode
             key={choice.id}
             type="button"
             onClick={() => onChoose(choice.id)}
-            className={`toddler-tap flex h-36 w-full flex-col items-center justify-center gap-2 rounded-[2.5rem] bg-gradient-to-br ${choice.theme} px-3 text-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 sm:h-56 sm:flex-1`}
+            className={`toddler-tap flex w-full flex-col items-center justify-center gap-2 rounded-[2.5rem] bg-gradient-to-br ${choice.theme} px-3 text-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 ${
+              many ? 'h-32 sm:h-44' : 'h-36 sm:h-56 sm:flex-1'
+            }`}
           >
-            <Icon aria-hidden="true" className="size-9 sm:size-14" strokeWidth={2.2} />
-            <span aria-hidden="true" className="text-3xl font-black tracking-wide drop-shadow-sm sm:text-4xl">
+            <Icon aria-hidden="true" className={many ? 'size-8 sm:size-11' : 'size-9 sm:size-14'} strokeWidth={2.2} />
+            <span
+              aria-hidden="true"
+              className={`font-black tracking-wide drop-shadow-sm ${many ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'}`}
+            >
               {choice.glyph}
             </span>
-            <span className="text-lg font-bold sm:text-xl">{choice.title}</span>
+            <span className={`font-bold ${many ? 'text-base sm:text-lg' : 'text-lg sm:text-xl'}`}>{choice.title}</span>
           </button>
         );
       })}

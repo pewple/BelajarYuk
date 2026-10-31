@@ -112,7 +112,7 @@ describe('media check page', () => {
     expect(wordsAudio).toHaveTextContent(`2 / ${WORD_CARDS.length}`);
 
     const sentences = screen.getByText('Kalimat').closest('summary')!;
-    expect(sentences).toHaveTextContent('1 / 9');
+    expect(sentences).toHaveTextContent('1 / 11');
 
     const wordsImages = screen.getByText('Kartu kata di Belajar Bicara').closest('summary')!;
     expect(wordsImages).toHaveTextContent(`1 / ${WORD_CARDS.length}`);

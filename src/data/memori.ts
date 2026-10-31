@@ -10,11 +10,15 @@ import type { Script } from './scripts';
  * again. Remembering where a card was is working memory, and at three years old
  * four cards is already a real challenge.
  *
- * Two kinds of pair, easiest first:
- *  - the same picture twice (two apples);
- *  - a letter and a picture that starts with it (A and an apple), which is the
- *    link Belajar Bicara teaches. In Arabic it is a hijaiyah letter and the
- *    word card for it.
+ * Two kinds of pair, which the child (or the grown-up beside them) picks
+ * between before a game begins - or leaves to chance:
+ *  - Gambar: the same picture twice (two apples);
+ *  - Huruf: a letter and a picture that starts with it (A and an apple), which
+ *    is the link Belajar Bicara teaches. In Arabic it is a hijaiyah letter and
+ *    the word card for it.
+ *  - Acak: a coin is flipped for every round.
+ *
+ * Each kind has its own run of levels, from four cards up to eight.
  *
  * This file is only the rules: what the cards are, how they are dealt, and what
  * turning one over does. The screen draws it and speaks it.
@@ -30,20 +34,42 @@ export type Face =
 /** Two faces that belong together. For a "same picture" pair they are equal. */
 export type Pair = { id: string; a: Face; b: Face };
 
+/** What the pairs are made of: two of the same picture, or a letter and its picture. */
+export type MemoriKind = 'picture' | 'letter';
+
+/** What the child chose to play; "acak" flips a coin per round between the two kinds. */
+export type MemoriMode = 'gambar' | 'huruf' | 'acak';
+
 export type MemoriLevel = {
   id: string;
   pairs: number;
-  mode: 'picture' | 'letter';
+  mode: MemoriKind;
 };
 
-/** Four cards, six, eight - then letters with their pictures. */
+/** Four cards, six, eight - first with pictures, then with letters and their pictures. */
 export const MEMORI_LEVELS: MemoriLevel[] = [
   { id: 'sama-2', pairs: 2, mode: 'picture' },
   { id: 'sama-3', pairs: 3, mode: 'picture' },
   { id: 'sama-4', pairs: 4, mode: 'picture' },
+  { id: 'huruf-2', pairs: 2, mode: 'letter' },
   { id: 'huruf-3', pairs: 3, mode: 'letter' },
   { id: 'huruf-4', pairs: 4, mode: 'letter' },
 ];
+
+/** The levels of one kind, easiest first. */
+export function levelsOf(kind: MemoriKind): MemoriLevel[] {
+  return MEMORI_LEVELS.filter((level) => level.mode === kind);
+}
+
+/**
+ * What the next round is made of. A fixed choice stays put; "acak" flips a coin
+ * every round. `random` is injectable so a test can say which way it falls.
+ */
+export function kindFor(mode: MemoriMode, random: () => number = Math.random): MemoriKind {
+  if (mode === 'gambar') return 'picture';
+  if (mode === 'huruf') return 'letter';
+  return random() < 0.5 ? 'picture' : 'letter';
+}
 
 /**
  * Words with clear, different pictures, each starting with a different letter.

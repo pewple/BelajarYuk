@@ -3,12 +3,30 @@ import type { Face } from '../data/memori';
 import { HIJAIYAH } from '../data/scripts';
 import { LANG_TAGS, letterNameFor } from '../audio/words';
 import type { LetterLang } from '../audio/words';
-import { CLIP_IDS, letterClipId, wordClipId } from './clips';
+import { CLIP_IDS, MAZE_CLIP_IDS, MEMORI_CLIP_IDS, letterClipId, wordClipId } from './clips';
 import { arabicLetterPart, arabicWordPart } from './scriptVoice';
 import type { Part } from './voiceParts';
 
 /** "Cari yang sama!" - the instruction that opens every round. */
 export const findSameLine = (): Part[] => [{ clip: CLIP_IDS.findSame, text: 'Cari yang sama!' }];
+
+/**
+ * "Pilih gambar, huruf, atau acak!" - made of the maze chooser's own words, so
+ * the recordings made for the maze are heard here too.
+ */
+export const chooseModeLine = (): Part[] => [
+  { clip: MAZE_CLIP_IDS.choose, text: 'Pilih' },
+  { clip: MEMORI_CLIP_IDS.picture, text: 'gambar,' },
+  { clip: MAZE_CLIP_IDS.letters, text: 'huruf,' },
+  { clip: MAZE_CLIP_IDS.or, text: 'atau' },
+  { clip: MAZE_CLIP_IDS.random, text: 'acak!' },
+];
+
+/** "Lihat dulu!" - said as the cards are shown, before they are turned down. */
+export const lookFirstLine = (): Part[] => [{ clip: CLIP_IDS.lookFirst, text: 'Lihat dulu!' }];
+
+/** "Mulai!" - the cards are down, go. Said just before the instruction. */
+export const startLine = (): Part[] => [{ clip: CLIP_IDS.start, text: 'Mulai!' }];
 
 /**
  * What a face says when its card is turned over: a picture says its word, a

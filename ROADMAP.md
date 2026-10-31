@@ -21,8 +21,10 @@ dan didampingi orang dewasa; di bawah 2 tahun sebaiknya tanpa layar.
 - [x] Modul Pola (AB, AAB, ABB, ABC)
 - [x] Dapat dipasang sebagai aplikasi dan jalan tanpa internet (PWA)
 - [x] Nomor versi di pojok kanan atas; catatan PWA dan privasi di layar utama
-- [x] Modul Memori (mencari pasangan: gambar sama, lalu huruf dan gambar)
-- [x] Modul Menulis (menelusuri huruf A–Z dan angka 0–9 dengan jari)
+- [x] Modul Memori (mencari pasangan; pilihan Gambar / Huruf / Acak, dengan hitung mundur saat kartu diperlihatkan)
+- [x] Modul Menulis (menelusuri huruf A–Z, a–z, angka 0–9, hijaiyah dan angka ٠–٩ dengan jari, selalu berurutan)
+- [x] Gerbang orang tua dinilai otomatis dan bisa diketik di komputer (tanpa tombol centang)
+- [x] Kata Arab di Belajar Bicara berakhiran -un (tanwin)
 
 ## Belum / sengaja ditunda
 
@@ -31,9 +33,10 @@ dan didampingi orang dewasa; di bawah 2 tahun sebaiknya tanpa layar.
 - [ ] Dorongan keluar layar di akhir sesi ("cari huruf A di kemasan")
 - [ ] Gambar asli (bukan ikon) untuk dek Arab — empat kata memakai gambar buatan sendiri
       (keju, roti, beruang, emas) dan beberapa ikon hanya pendekatan (raʾs = ikon orang)
-- [ ] Menelusuri huruf hijaiyah dan angka ١–٩ di Menulis (butuh garis yang dibuat/diperiksa
-      orang yang menulis Arab; bentuk bersambung, titik, dan urutan goresan khusus)
-- [ ] Menelusuri huruf kecil (a–z) dan angka 10
+- [ ] Garis huruf hijaiyah dan angka Arab di Menulis diperiksa orang yang menulis Arab
+      (dibuat tangan mengikuti font sistem; lihat README, "Lembar uji bentuk"). Bentuk
+      bersambung (awal/tengah/akhir kata) belum ada: hanya bentuk tunggal
+- [ ] Menelusuri angka 10 dan seterusnya (dua angka berdampingan)
 - [ ] Kata kedua tiap huruf Arab dari daftar awal (أَسَد, بَيْت, تَاج …) sebagai kartu cadangan
 
 ## Modul berikutnya

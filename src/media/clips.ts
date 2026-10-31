@@ -63,6 +63,9 @@ export const CLIP_IDS = {
   findSame: 'phrases/cari-yang-sama',
   followLine: 'phrases/ikuti-garis',
   continuePattern: 'phrases/lanjutkan-pola',
+  // Memori's countdown before the hunt: "Lihat dulu!" while the cards show, "Mulai!" as they turn.
+  lookFirst: 'phrases/lihat-dulu',
+  start: 'phrases/mulai',
   tryAgain: 'phrases/coba-lagi',
   pop: 'ui/pop',
   tap: 'ui/tap',
@@ -70,6 +73,8 @@ export const CLIP_IDS = {
   coin: 'ui/coin',
   register: 'ui/register',
   nudge: 'ui/nudge',
+  tick: 'ui/hitung-mundur',
+  go: 'ui/mulai',
 } as const;
 
 /** The few fixed words of the maze. Its letters and numbers reuse the existing clips. */
@@ -86,6 +91,11 @@ export const MAZE_CLIP_IDS = {
   numbers: 'maze/angka',
   or: 'maze/atau',
   random: 'maze/acak',
+} as const;
+
+/** The one word Memori's picker adds to the maze's: "Pilih gambar, huruf, atau acak!" */
+export const MEMORI_CLIP_IDS = {
+  picture: 'memori/gambar',
 } as const;
 
 /**

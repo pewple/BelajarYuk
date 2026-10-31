@@ -11,13 +11,12 @@ export function gateSum(): { a: number; b: number } {
   return { a: Number(match[1]), b: Number(match[2]) };
 }
 
-/** Types `answer` on the gate's keypad and presses the check button. */
+/** Taps `answer` out on the gate's keypad. The gate judges it by itself on the last digit. */
 export async function answerGate(user: UserEvent, answer: string): Promise<void> {
   const dialog = screen.getByRole('dialog', { name: 'Khusus orang tua' });
   for (const digit of answer) {
     await user.click(within(dialog).getByRole('button', { name: digit }));
   }
-  await user.click(within(dialog).getByRole('button', { name: 'Periksa jawaban' }));
 }
 
 /**

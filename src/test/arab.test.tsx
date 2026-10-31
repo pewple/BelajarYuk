@@ -457,11 +457,11 @@ describe('Arabic letters and numerals', () => {
       const user = setupUser();
       await openIn(user, /Belajar Bicara/);
 
-      expect(screen.getByRole('button', { name: /^Dengarkan kata أَرْنَب \(Kelinci\)/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Dengarkan kata أَرْنَبٌ \(Kelinci\)/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Dengarkan huruf ا (Alif)' })).toBeInTheDocument();
       expect(screen.getByText('1 dari 28 — Kelinci')).toBeInTheDocument();
       // For the grown-up who does not read Arabic.
-      expect(screen.getByText('Arnab · Kelinci')).toBeInTheDocument();
+      expect(screen.getByText('Arnabun · Kelinci')).toBeInTheDocument();
     });
 
     it('goes through all 28 cards, each word with its own letter, and round again', async () => {
@@ -491,7 +491,7 @@ describe('Arabic letters and numerals', () => {
       await user.click(screen.getByRole('button', { name: /^Dengarkan kata/ }));
       await user.click(screen.getByRole('button', { name: /^Dengarkan huruf/ }));
 
-      expect(spokenUtterances.map((u) => `${u.lang}|${u.text}`)).toEqual(['ar-SA|أَرْنَب', 'ar-SA|ألف']);
+      expect(spokenUtterances.map((u) => `${u.lang}|${u.text}`)).toEqual(['ar-SA|أَرْنَبٌ', 'ar-SA|ألف']);
     });
 
     it('says the Indonesian spelling when it has none', async () => {
@@ -501,7 +501,7 @@ describe('Arabic letters and numerals', () => {
 
       await user.click(screen.getByRole('button', { name: /^Dengarkan kata/ }));
 
-      expect(spokenUtterances).toEqual([{ text: 'arnab', lang: 'id-ID', voice: 'Test Indonesian' }]);
+      expect(spokenUtterances).toEqual([{ text: 'arnabun', lang: 'id-ID', voice: 'Test Indonesian' }]);
     });
 
     it('uses a recording of the word when there is one', async () => {

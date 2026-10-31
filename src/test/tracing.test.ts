@@ -1,25 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DOT_LENGTH,
   END_RADIUS,
   LOOKAHEAD,
   OFF_COURSE,
   START_RADIUS,
   TOLERANCE,
+  TRACE_ARABIC_DIGITS,
   TRACE_DIGITS,
+  TRACE_HIJAIYAH,
   TRACE_LETTERS,
+  TRACE_LOWERCASE,
   begin,
   drag,
   glyphOf,
   glyphsFor,
   inkUpTo,
+  isArabicKind,
   lift,
   newTrace,
   pathD,
   pointAt,
 } from '../data/tracing';
-import type { Glyph, Pt, Trace, TraceEvent } from '../data/tracing';
+import type { Glyph, Pt, Trace, TraceEvent, TraceKind } from '../data/tracing';
+import { HIJAIYAH } from '../data/scripts';
 
-const ALL = [...TRACE_LETTERS, ...TRACE_DIGITS];
+const KINDS: TraceKind[] = ['letters', 'lowercase', 'numbers', 'hijaiyah', 'arabicNumbers'];
+const ALL = KINDS.flatMap((kind) => glyphsFor(kind));
 
 /** Points along stroke `n` of a glyph, `gap` apart, each moved sideways by `offset`. */
 function along(glyph: Glyph, n: number, gap = 3, offset = 0): Pt[] {
@@ -56,19 +63,49 @@ function traceAll(glyph: Glyph, offset = 0): { trace: Trace; events: TraceEvent[
 }
 
 describe('the glyphs', () => {
-  it('are the 26 letters and the ten digits, in the order a child learns them', () => {
-    expect(TRACE_LETTERS).toHaveLength(26);
-    expect(TRACE_DIGITS).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
+  it('are every kind a child can write, each in the order it is learned', () => {
+    expect(TRACE_LETTERS.join('')).toBe('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+    expect(TRACE_LOWERCASE.join('')).toBe('abcdefghijklmnopqrstuvwxyz');
+    expect(TRACE_DIGITS.join('')).toBe('0123456789');
+    expect(TRACE_HIJAIYAH).toEqual(HIJAIYAH.map((letter) => letter.glyph));
+    expect(TRACE_HIJAIYAH).toHaveLength(28);
+    expect(TRACE_ARABIC_DIGITS.join('')).toBe('٠١٢٣٤٥٦٧٨٩');
     expect(glyphsFor('letters')).toBe(TRACE_LETTERS);
+    expect(glyphsFor('lowercase')).toBe(TRACE_LOWERCASE);
     expect(glyphsFor('numbers')).toBe(TRACE_DIGITS);
+    expect(glyphsFor('hijaiyah')).toBe(TRACE_HIJAIYAH);
+    expect(glyphsFor('arabicNumbers')).toBe(TRACE_ARABIC_DIGITS);
   });
 
-  it.each(ALL)('%s has strokes, all of them on the board and long enough to draw', (id) => {
+  it('are in order: letters alphabetical, digits numerical - nothing out of sequence', () => {
+    expect([...TRACE_LETTERS].sort()).toEqual(TRACE_LETTERS);
+    expect([...TRACE_LOWERCASE].sort()).toEqual(TRACE_LOWERCASE);
+    expect(TRACE_DIGITS.map(Number)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(TRACE_ARABIC_DIGITS.map((d) => d.charCodeAt(0))).toEqual(
+      Array.from({ length: 10 }, (_, n) => 0x0660 + n),
+    );
+  });
+
+  it('know which kinds are written from right to left', () => {
+    expect(KINDS.filter(isArabicKind)).toEqual(['hijaiyah', 'arabicNumbers']);
+  });
+
+  it.each(KINDS)('have no two %s the same: every one is its own shape', (kind) => {
+    // (Across kinds a straight stroke is a straight stroke: the capital I is also ١.)
+    const shapes = glyphsFor(kind).map((id) =>
+      JSON.stringify(glyphOf(id).strokes.map((s) => s.points.map((p) => [Math.round(p.x), Math.round(p.y)]))),
+    );
+    expect(new Set(shapes).size).toBe(shapes.length);
+  });
+
+  it.each(ALL)('%s has strokes, all of them on the board and long enough to draw (or a dot)', (id) => {
     const glyph = glyphOf(id);
 
     expect(glyph.strokes.length).toBeGreaterThan(0);
     for (const stroke of glyph.strokes) {
-      expect(stroke.length).toBeGreaterThan(25);
+      // A dot is a stroke too short to follow: touching it draws it.
+      if (stroke.length > DOT_LENGTH) expect(stroke.length).toBeGreaterThan(25);
+      expect(stroke.length).toBeGreaterThan(1);
       for (const p of stroke.points) {
         expect(p.x).toBeGreaterThanOrEqual(0);
         expect(p.x).toBeLessThanOrEqual(100);
@@ -99,6 +136,56 @@ describe('the glyphs', () => {
     const topStart = TRACE_LETTERS.filter((id) => glyphOf(id).strokes[0].points[0].y <= 15);
     // Everything but the letters that begin with a curve at the side or a stroke at the foot.
     expect(topStart.length).toBeGreaterThanOrEqual(20);
+  });
+
+  it('start Arabic letters at the right-hand end, because Arabic is written from right to left', () => {
+    for (const id of TRACE_HIJAIYAH) expect(glyphOf(id).strokes[0].points[0].x, id).toBeGreaterThanOrEqual(50);
+  });
+
+  it('write the body of an Arabic letter first and its dots last', () => {
+    for (const id of TRACE_HIJAIYAH) {
+      const strokes = glyphOf(id).strokes;
+      const dotsFrom = strokes.findIndex((s) => s.length <= DOT_LENGTH);
+      if (dotsFrom < 0) continue;
+      expect(dotsFrom, id).toBeGreaterThan(0);
+      for (const stroke of strokes.slice(dotsFrom)) expect(stroke.length, id).toBeLessThanOrEqual(DOT_LENGTH);
+    }
+  });
+
+  it('give each dotted Arabic letter the dots it has', () => {
+    const dots = (id: string) => glyphOf(id).strokes.filter((s) => s.length <= DOT_LENGTH).length;
+    // Alif to ya: none, one, two, three, one, none, one ...
+    const expected = [0, 1, 2, 3, 1, 0, 1, 0, 1, 0, 1, 0, 3, 0, 1, 0, 1, 0, 1, 1, 2, 0, 0, 0, 1, 0, 0, 2];
+    expect(TRACE_HIJAIYAH.map(dots)).toEqual(expected);
+  });
+
+  it('draw the eight as one closed figure and the six as a loop that comes back to its stem', () => {
+    const eight = glyphOf('8').strokes[0];
+    const six = glyphOf('6').strokes[0];
+    const gap = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y);
+
+    // It ends where it began - the top of the eight is closed - and passes through the waist twice.
+    expect(gap(eight.points[0], eight.points.at(-1)!)).toBeLessThan(2);
+    const waist = eight.points.filter((p) => gap(p, { x: 50, y: 50 }) < 2);
+    expect(waist.length).toBeGreaterThanOrEqual(2);
+
+    // The six runs down its stem and round the whole bowl, back to where the stem came down.
+    const stemFoot = six.points.reduce((best, p) => (p.x < best.x ? p : best), six.points[0]);
+    expect(gap(six.points.at(-1)!, stemFoot)).toBeLessThan(4);
+    expect(Math.max(...six.points.map((p) => p.y))).toBeGreaterThan(85); // right round the bottom
+    expect(Math.max(...six.points.map((p) => p.x))).toBeGreaterThan(65); // and up the right side
+  });
+
+  it('put the small letters on the copybook lines, tall letters up to the top and deep ones below', () => {
+    const top = (id: string) => Math.min(...glyphOf(id).strokes.flatMap((s) => s.points.map((p) => p.y)));
+    const bottom = (id: string) => Math.max(...glyphOf(id).strokes.flatMap((s) => s.points.map((p) => p.y)));
+
+    for (const id of 'acemnorsuvwxz'.split('')) {
+      expect(top(id), id).toBeGreaterThanOrEqual(30); // they stay below the middle line
+      expect(bottom(id), id).toBeLessThanOrEqual(78); // and on the baseline
+    }
+    for (const id of 'bdfhklt'.split('')) expect(top(id), id).toBeLessThanOrEqual(16); // ascenders
+    for (const id of 'gjpqy'.split('')) expect(bottom(id), id).toBeGreaterThanOrEqual(86); // descenders
   });
 });
 
@@ -146,6 +233,79 @@ describe('tracing a glyph', () => {
 
     expect(begin(glyph, trace, glyph.strokes[0].points[0]).event.type).toBe('none');
     expect(drag(glyph, trace, { x: 25, y: 50 }).event.type).toBe('none');
+  });
+});
+
+describe('dots', () => {
+  it('are drawn by touching them: there is nothing to follow', () => {
+    const glyph = glyphOf('i');
+    const body = glyph.strokes[0];
+    let trace = begin(glyph, newTrace(), body.points[0]).trace;
+    for (const p of along(glyph, 0)) trace = drag(glyph, trace, p).trace;
+    trace = lift(trace);
+    expect(trace).toMatchObject({ stroke: 1, progress: 0 });
+
+    const touched = begin(glyph, trace, glyph.strokes[1].points[0]);
+    expect(touched.event).toEqual({ type: 'glyph', clean: true });
+    expect(touched.trace.done).toBe(true);
+  });
+
+  it('are not drawn by a touch somewhere else', () => {
+    const glyph = glyphOf('i');
+    let trace = begin(glyph, newTrace(), glyph.strokes[0].points[0]).trace;
+    for (const p of along(glyph, 0)) trace = drag(glyph, trace, p).trace;
+    trace = lift(trace);
+
+    expect(begin(glyph, trace, { x: 5, y: 95 }).event.type).toBe('none');
+  });
+
+  it('can be a whole glyph: Arabic zero is a dot, and is done at once', () => {
+    const glyph = glyphOf('٠');
+    const step = begin(glyph, newTrace(), glyph.strokes[0].points[0]);
+
+    expect(step.event).toEqual({ type: 'glyph', clean: true });
+    expect(step.trace.done).toBe(true);
+  });
+});
+
+describe('following smoothly', () => {
+  it('puts the ink exactly under the finger, not on the nearest corner of the line', () => {
+    const glyph = glyphOf('I'); // a straight line down: progress is just how far down the finger is
+    const stroke = glyph.strokes[0];
+    let trace = begin(glyph, newTrace(), stroke.points[0]).trace;
+
+    for (const y of [13.3, 17.1, 22.7, 31.9, 40.03]) {
+      trace = drag(glyph, trace, { x: 50, y }).trace;
+      expect(trace.progress, `finger at ${y}`).toBeCloseTo(y - stroke.points[0].y, 1);
+    }
+  });
+
+  it('follows a finger that is beside the line as far along as it has got', () => {
+    const glyph = glyphOf('I');
+    let trace = begin(glyph, newTrace(), glyph.strokes[0].points[0]).trace;
+    trace = drag(glyph, trace, { x: 58, y: 40 }).trace;
+
+    expect(trace.progress).toBeCloseTo(30, 1);
+  });
+
+  it('never takes ink back when the finger wobbles backwards', () => {
+    const glyph = glyphOf('I');
+    let trace = begin(glyph, newTrace(), glyph.strokes[0].points[0]).trace;
+    trace = drag(glyph, trace, { x: 50, y: 40 }).trace;
+    const reached = trace.progress;
+    trace = drag(glyph, trace, { x: 50, y: 36 }).trace;
+
+    expect(trace.progress).toBe(reached);
+  });
+
+  it('keeps its place where the path crosses itself: round the eight and through its waist twice', () => {
+    const glyph = glyphOf('8');
+    const stroke = glyph.strokes[0];
+    let trace = begin(glyph, newTrace(), stroke.points[0]).trace;
+    for (let s = 0; s <= stroke.length; s += 2) trace = drag(glyph, trace, pointAt(stroke, s)).trace;
+
+    expect(trace.done).toBe(true);
+    expect(trace.misses).toBe(0);
   });
 });
 
