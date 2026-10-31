@@ -1,13 +1,14 @@
 # Belajar Yuk!
 
 Aplikasi belajar interaktif berbahasa Indonesia untuk balita usia ±3 tahun.
-Delapan permainan: **Mengenal Huruf**, **Belajar Bicara**, **Berhitung 1–10**,
+Sembilan permainan: **Mengenal Huruf**, **Belajar Bicara**, **Berhitung 1–10**,
 **Menulis** (menelusuri huruf dan angka dengan jari), **Pola** (melanjutkan barisan
 bentuk berwarna), **Memori** (mencari pasangan kartu), **Labirin** (mengikuti urutan
-huruf atau angka sampai ke tujuan), dan **Kasir** (menghitung uang kembalian selangkah
-demi selangkah). Huruf dan angka bisa ditulis Latin atau Arab (hijaiyah).
+huruf atau angka sampai ke tujuan), **Kasir** (menghitung uang kembalian selangkah
+demi selangkah), dan **Memasak** (mengikuti resep: berurutan, menunggu matang, dan dua
+masakan sekaligus). Huruf dan angka bisa ditulis Latin atau Arab (hijaiyah).
 
-Nomor versi (`v1.2.0`, dari `package.json`) tampil kecil di pojok kanan atas setiap
+Nomor versi (`v1.3.0`, dari `package.json`) tampil kecil di pojok kanan atas setiap
 halaman. Di bawah layar utama ada catatan singkat untuk orang tua: aplikasi bisa dipasang
 dan dibuka tanpa internet, berjalan hanya di perangkat ini, **tanpa cookie**, tanpa akun,
 tanpa pelacak, dan tidak mengirim data ke mana pun (pengaturan dan catatan belajar disimpan
@@ -132,6 +133,9 @@ src/
   data/navigation.ts       Pilihan di layar utama
   data/pola.ts             Bentuk, tingkat pola, dan cara membuat satu ronde
   data/memori.ts           Aturan Memori: memilih pasangan, mengocok, membalik kartu
+  data/memasak.ts          Aturan Memasak: resep, lemari bahan, kompor dan waktu (tanpa jam sendiri)
+  media/memasakVoice.ts    "Ayo masak ...", nama bahan dan masakan, "Tunggu ya!", "Gosong!"
+  components/KitchenParts  Kartu resep, tombol bahan, tombol kompor
   data/tracing.ts          Aturan mengikuti garis dengan jari, dan daftar yang bisa ditelusuri
   data/glyphsLatin.ts      Garis huruf besar, huruf kecil, dan angka
   data/glyphsArabic.ts     Garis huruf hijaiyah dan angka Arab (perlu diperiksa penulis Arab)
@@ -167,7 +171,7 @@ src/
   media/mazeVoice.ts       Kalimat labirin
   components/              ScreenFrame, StepButton, PulseRing, LangToggle, CardArt, MoneyPiece, Celebration,
                            ModeChooser (layar pilihan), RoundButtons (Lanjut, tombol ikon)
-  screens/                 Home, Alphabet, Pronunciation, Counting, Menulis, Pola, Memori, Labirin, Kasir, MediaCheck (#media)
+  screens/                 Home, Alphabet, Pronunciation, Counting, Menulis, Pola, Memori, Labirin, Kasir, Memasak, MediaCheck (#media)
   test/                    Setup jsdom + tes integrasi
 public/media/              Suara dan gambar sendiri (audio/, images/, manifest.js)
 packaging/                 Berkas untuk pengguna akhir: Perbarui-Media.bat/.ps1, BACA-SAYA.txt
@@ -514,6 +518,38 @@ sudah lulus tidak mendapat hitung mundur ini. Rekaman sendiri: `phrases/lihat-du
 `phrases/mulai`, `ui/hitung-mundur`, `ui/mulai`, `memori/gambar`. Pasangan yang pernah salah
 dicatat (ulangan berjarak) dan dimasukkan lebih dulu ke ronde berikutnya. Tombol *Kocok
 ulang* mengocok lagi ronde yang sama.
+
+**Memasak: mengikuti resep.** Modul terakhir di layar utama (setelah Kasir), untuk anak 3-4 tahun
+sebagai tingkat awal. Resep selalu **gambar berurutan** (tanpa membaca): bahan apa masuk dulu,
+dan di mana ada langkah masak (api + jumlah detik). Dua sampai lima bahan per resep. Pertama
+dipilih caranya (diucapkan: "Pilih cara memasak!"), lalu resep datang satu per satu dalam
+urutan tetap dan mengulang di akhir:
+
+1. **Susun** (5 resep, 2-3 bahan): bahan dimasukkan sesuai urutan kartu resep — roti, keju,
+   roti. Tidak ada kompor. Lemari bahan *persis* sama dengan kebutuhan (titik oranye = sisa),
+   ditambah satu bahan yang tidak dipakai sebagai pengecoh.
+2. **Tunggu** (6 resep, satu langkah masak 3-5 detik): setelah bahan masuk, ketuk kompor;
+   cincin terisi sambil menghitung detik; saat matang berbunyi ("Sudah matang! Ketuk!") dan
+   diangkat dengan satu ketukan. Diketuk terlalu cepat = "Tunggu ya!" (tidak dihitung salah).
+   Dibiarkan terlalu lama (6 detik setelah matang) = **gosong**: dibuang, resep mulai lagi dari
+   awal, bahan yang sudah masuk hilang.
+3. **Dua sekaligus** (3 pesanan, dua masakan, dua kompor): mulai memasak yang satu, lalu
+   kerjakan yang lain selagi menunggu. Bahan yang sama (telur) dipakai bersama dari satu lemari.
+
+**Sumber daya terbatas.** Setiap bahan yang dipakai mengurangi titiknya. Di tingkat yang bisa
+gosong, tiap bahan punya **satu cadangan**; bila gosong dua kali dan bahan habis, muncul
+"Habis! Ayo belanja lagi!" dan lemari diisi penuh lagi (tidak pernah buntu). Bahan yang salah
+tidak terpakai sama sekali.
+
+**Salah itu lembut**: bunyi pelan, "Cari telur!", dan bahan yang benar menyala. Petunjuk memudar
+seperti permainan lain: anak baru melihat langkah berikutnya di kartu resep, bahan/kompor yang
+harus diketuk menyala, dan **masakannya tidak bisa gosong**; setelah 3 pilihan benar berturut-turut
+semuanya hilang (gosong mulai berlaku), dan setelah 2 salah (bahan keliru, atau gosong) kembali.
+Aturan murni ada di `data/memasak.ts` (semua fungsi waktu menerima `now`, tanpa jam sendiri,
+jadi diuji tanpa menunggu); layar mengetik jam tiap 0,1 detik hanya selama ada yang di atas kompor.
+Rekaman sendiri: `cook/bahan/<id>`, `cook/menu/<id>`, `cook/ayo-masak`, `cook/tunggu`, `cook/matang`,
+`cook/gosong` dll. (lihat `#media`); gambar sendiri `cook/bahan/<id>` dan `cook/menu/<id>`. Nasi dan mie
+punya ikon buatan sendiri (`components/drawnIcons.ts`).
 
 **Penguatan positif.** Penyelesaian memicu konfeti, arpeggio nada mayor, angka
 yang berubah dari "?" menjadi jumlahnya, dan pujian singkat yang dirotasi

@@ -50,6 +50,11 @@ export function mazePicture(name: string): string | undefined {
   return pictureUrl(`maze/${slugify(name)}`);
 }
 
+/** Artwork for the kitchen: an ingredient (bahan/telur) or a dish (menu/nasi-goreng). */
+export function memasakPicture(path: string): string | undefined {
+  return pictureUrl(`cook/${path}`);
+}
+
 /** Artwork for a home screen card, keyed by its screen id. */
 export function homePicture(id: string): string | undefined {
   return pictureUrl(`home/${slugify(id)}`);

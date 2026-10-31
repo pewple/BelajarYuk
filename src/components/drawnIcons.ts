@@ -43,3 +43,21 @@ export const GoldBar = createLucideIcon('gold-bar', [
   ['path', { d: 'm6.5 4.5 1.4 1.6', key: 'g2' }],
   ['path', { d: 'm17.5 4.5-1.4 1.6', key: 'g3' }],
 ]);
+
+/** A bowl heaped with rice - nasi. */
+export const Rice = createLucideIcon('rice', [
+  ['path', { d: 'M3 12h18a9 9 0 0 1-18 0Z', key: 'bowl' }],
+  ['path', { d: 'M6 12a6 5 0 0 1 12 0', key: 'heap' }],
+  ['path', { d: 'M9.5 8.5v.01', key: 'g1' }],
+  ['path', { d: 'M12 7v.01', key: 'g2' }],
+  ['path', { d: 'M14.5 8.5v.01', key: 'g3' }],
+  ['path', { d: 'M8 21h8', key: 'foot' }],
+]);
+
+/** A bowl of noodles with a wavy strand over the rim - mie. */
+export const Noodles = createLucideIcon('noodles', [
+  ['path', { d: 'M3 12h18a9 9 0 0 1-18 0Z', key: 'bowl' }],
+  ['path', { d: 'M6 9c1.5-2 3-2 4.5 0s3 2 4.5 0 2.5-2 3.5-1', key: 'w1' }],
+  ['path', { d: 'M8 6c1.2-1.6 2.4-1.6 3.6 0s2.4 1.6 3.6 0', key: 'w2' }],
+  ['path', { d: 'M8 21h8', key: 'foot' }],
+]);

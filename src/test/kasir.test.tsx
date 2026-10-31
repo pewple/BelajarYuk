@@ -76,12 +76,13 @@ describe('Kasir', () => {
   afterEach(() => vi.useRealTimers());
 
   describe('opening it', () => {
-    it('is the last card on the home screen', () => {
+    it('is on the home screen, just before Memasak', () => {
       render(<App />);
 
       const cards = screen.getAllByRole('button');
-      expect(cards).toHaveLength(8);
-      expect(cards[cards.length - 1]).toHaveTextContent('Kasir');
+      expect(cards).toHaveLength(9);
+      expect(cards[cards.length - 2]).toHaveTextContent('Kasir');
+      expect(cards[cards.length - 1]).toHaveTextContent('Memasak');
     });
 
     it('opens on the first customer and returns home', async () => {

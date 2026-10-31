@@ -99,6 +99,34 @@ export const MEMORI_CLIP_IDS = {
 } as const;
 
 /**
+ * The few fixed words of the kitchen. Each ingredient and each dish is a clip
+ * of its own too - see `ingredientClipId` and `dishClipId`.
+ */
+export const COOK_CLIP_IDS = {
+  choose: 'cook/pilih',
+  letsCook: 'cook/ayo-masak',
+  find: 'cook/cari',
+  wait: 'cook/tunggu',
+  ready: 'cook/matang',
+  burnt: 'cook/gosong',
+  out: 'cook/habis',
+  shopAgain: 'cook/belanja-lagi',
+  done: 'cook/jadi',
+  cookNow: 'cook/masak-dulu',
+  and: 'cook/dan',
+} as const;
+
+/** An ingredient's name, e.g. "cook/bahan/telur". */
+export function ingredientClipId(id: string): string {
+  return `cook/bahan/${id}`;
+}
+
+/** A dish's name, e.g. "cook/menu/nasi-goreng". */
+export function dishClipId(id: string): string {
+  return `cook/menu/${id}`;
+}
+
+/**
  * The few fixed words of the cash register module. The amounts themselves are
  * `money/<rupiah>` clips - see `moneyClipId`.
  */

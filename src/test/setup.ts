@@ -197,6 +197,7 @@ beforeEach(() => {
         kasir: { level: 'independent', streak: 0 },
         memori: { level: 'independent', streak: 0 },
         menulis: { level: 'independent', streak: 0 },
+        memasak: { level: 'independent', streak: 0 },
       }),
     );
   } catch {

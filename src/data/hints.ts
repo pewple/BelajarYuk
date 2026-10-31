@@ -49,7 +49,7 @@ export function nextHintState(state: HintState, correct: boolean): HintState {
 export const HINTS_STORAGE_KEY = 'belajar-yuk:hints';
 
 /** The games that have hints. */
-export type HintedGame = 'labirin' | 'kasir' | 'pola' | 'memori' | 'menulis';
+export type HintedGame = 'labirin' | 'kasir' | 'pola' | 'memori' | 'menulis' | 'memasak';
 
 type Stored = Partial<Record<HintedGame, HintState>>;
 

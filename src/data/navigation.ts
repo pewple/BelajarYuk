@@ -1,4 +1,4 @@
-import { Calculator, Footprints, HandCoins, LayoutGrid, MessageCircleHeart, PencilLine, Shapes, Type } from 'lucide-react';
+import { Calculator, ChefHat, Footprints, HandCoins, LayoutGrid, MessageCircleHeart, PencilLine, Shapes, Type } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { ScreenId } from '../types';
 
@@ -68,5 +68,12 @@ export const HOME_CHOICES: HomeChoice[] = [
     glyph: 'Rp',
     icon: HandCoins,
     theme: 'from-amber-600 to-orange-700',
+  },
+  {
+    id: 'masak',
+    title: 'Memasak',
+    glyph: 'Nasi',
+    icon: ChefHat,
+    theme: 'from-orange-500 to-rose-600',
   },
 ];

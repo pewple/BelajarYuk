@@ -23,6 +23,7 @@ dan didampingi orang dewasa; di bawah 2 tahun sebaiknya tanpa layar.
 - [x] Nomor versi di pojok kanan atas; catatan PWA dan privasi di layar utama
 - [x] Modul Memori (mencari pasangan; pilihan Gambar / Huruf / Acak, dengan hitung mundur saat kartu diperlihatkan)
 - [x] Modul Menulis (menelusuri huruf A–Z, a–z, angka 0–9, hijaiyah dan angka ٠–٩ dengan jari, selalu berurutan)
+- [x] Modul Memasak tingkat 1-3 (menyusun, menunggu matang, dua masakan sekaligus; bahan terbatas)
 - [x] Gerbang orang tua dinilai otomatis dan bisa diketik di komputer (tanpa tombol centang)
 - [x] Kata Arab di Belajar Bicara berakhiran -un (tanwin)
 
@@ -38,6 +39,10 @@ dan didampingi orang dewasa; di bawah 2 tahun sebaiknya tanpa layar.
       bersambung (awal/tengah/akhir kata) belum ada: hanya bentuk tunggal
 - [ ] Menelusuri angka 10 dan seterusnya (dua angka berdampingan)
 - [ ] Kata kedua tiap huruf Arab dari daftar awal (أَسَد, بَيْت, تَاج …) sebagai kartu cadangan
+
+- [ ] Memasak tingkat 4 (mengulang "aduk 3 kali" dan "kalau mendidih, masukkan mi"), dan resep dengan
+      4-5 bahan; belum ada karena untuk usia 5-7 tahun
+- [ ] Mengantar (mengantar paket: lampu lalu lintas, rambu, bahan bakar) — sudah dirancang, belum dibuat
 
 ## Modul berikutnya
 

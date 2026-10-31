@@ -4,10 +4,12 @@ import { CHECKOUTS, DENOMINATIONS, SPOKEN_AMOUNTS, formatRupiah, rupiahWords } f
 import { HOME_CHOICES } from '../data/navigation';
 import { TOKENS } from '../data/pola';
 import { ARABIC_WORD_CARDS, arabicWordPictureId } from '../data/arabicWords';
+import { INGREDIENTS, LEVELS, ordersFor } from '../data/memasak';
 import { ARABIC_NUMBER_NAMES, HIJAIYAH, toArabicNumerals } from '../data/scripts';
 import { COUNT_PROMPT_ID, GREETING_ID, LETTER_NAMES_EN, LETTER_NAMES_ID, numberWordId } from '../audio/words';
 import {
   CLIP_IDS,
+  COOK_CLIP_IDS,
   MAZE_CLIP_IDS,
   MEMORI_CLIP_IDS,
   MONEY_CLIP_IDS,
@@ -16,6 +18,8 @@ import {
   arabicWordClipId,
   POLA_CLIP_IDS,
   colorClipId,
+  dishClipId,
+  ingredientClipId,
   letterClipId,
   moneyClipId,
   numberClipId,
@@ -174,6 +178,38 @@ export function buildSlots(): SlotCatalogue {
         slots: [{ id: MEMORI_CLIP_IDS.picture, label: 'Pilihan: gambar', say: 'gambar' }],
       },
       {
+        title: 'Memasak - kata tetap',
+        slots: [
+          { id: COOK_CLIP_IDS.choose, label: 'Pilihan: cara memasak', say: 'Pilih cara memasak!' },
+          { id: COOK_CLIP_IDS.letsCook, label: 'Perintah: ayo masak', say: 'Ayo masak' },
+          { id: COOK_CLIP_IDS.and, label: 'Dan', say: 'dan' },
+          { id: COOK_CLIP_IDS.find, label: 'Petunjuk: cari bahan', say: 'Cari' },
+          { id: COOK_CLIP_IDS.cookNow, label: 'Saatnya memasak', say: 'Masak dulu!' },
+          { id: COOK_CLIP_IDS.wait, label: 'Belum matang', say: 'Tunggu ya!' },
+          { id: COOK_CLIP_IDS.ready, label: 'Sudah matang', say: 'Sudah matang! Ketuk!' },
+          { id: COOK_CLIP_IDS.burnt, label: 'Gosong', say: 'Gosong! Coba lagi.' },
+          { id: COOK_CLIP_IDS.out, label: 'Bahan habis', say: 'Habis!' },
+          { id: COOK_CLIP_IDS.shopAgain, label: 'Belanja lagi', say: 'Habis! Ayo belanja lagi!' },
+          { id: COOK_CLIP_IDS.done, label: 'Masakan jadi', say: 'jadi!' },
+        ],
+      },
+      {
+        title: 'Memasak - nama bahan',
+        slots: INGREDIENTS.map((ingredient) => ({
+          id: ingredientClipId(ingredient.id),
+          label: ingredient.name,
+          say: ingredient.name,
+        })),
+      },
+      {
+        title: 'Memasak - nama masakan',
+        slots: [
+          ...new Map(
+            LEVELS.flatMap((level) => ordersFor(level).flat()).map((recipe) => [recipe.id, recipe] as const),
+          ).values(),
+        ].map((recipe) => ({ id: dishClipId(recipe.id), label: recipe.name, say: recipe.name })),
+      },
+      {
         title: 'Kasir - kata tetap',
         slots: [
           { id: MONEY_CLIP_IDS.price, label: 'Harganya', say: 'Harganya' },
@@ -220,6 +256,18 @@ export function buildSlots(): SlotCatalogue {
           id: arabicWordPictureId(card.letterId),
           label: `${card.word} (${card.meaning})`,
         })),
+      },
+      {
+        title: 'Bahan di Memasak',
+        slots: INGREDIENTS.map((ingredient) => ({ id: `cook/bahan/${ingredient.id}`, label: ingredient.name })),
+      },
+      {
+        title: 'Masakan di Memasak',
+        slots: [
+          ...new Map(
+            LEVELS.flatMap((level) => ordersFor(level).flat()).map((recipe) => [recipe.id, recipe] as const),
+          ).values(),
+        ].map((recipe) => ({ id: `cook/menu/${recipe.id}`, label: recipe.name })),
       },
       {
         title: 'Objek di Berhitung',
