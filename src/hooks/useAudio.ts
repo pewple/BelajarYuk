@@ -73,6 +73,8 @@ export type AudioApi = {
   playRegister: () => void;
   /** A soft, low "hmm" - not that one. Deliberately gentle, never a buzzer. */
   playNudge: () => void;
+  /** A counter bell: ting! */
+  playBell: () => void;
   /** A dry little click, once a second while a countdown runs. */
   playTick: () => void;
   /** Two notes stepping up: the countdown is over, go. */
@@ -195,6 +197,7 @@ export function useAudio(): AudioApi {
   const playCoin = useCallback(() => playEffect('coin'), []);
   const playRegister = useCallback(() => playEffect('register'), []);
   const playNudge = useCallback(() => playEffect('nudge'), []);
+  const playBell = useCallback(() => playEffect('bell'), []);
   const playTick = useCallback(() => playEffect('tick'), []);
   const playGo = useCallback(() => playEffect('go'), []);
 
@@ -215,6 +218,7 @@ export function useAudio(): AudioApi {
     playCoin,
     playRegister,
     playNudge,
+    playBell,
     playTick,
     playGo,
     praiseStep,

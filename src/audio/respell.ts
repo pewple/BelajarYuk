@@ -108,6 +108,14 @@ export const EN_VOICE_RESPELL: Record<string, string> = {
   acak: 'ah-chahk',
 
   // The kitchen
+  bel: 'bell',
+  selamat: 'suh-lah-maht',
+  datang: 'dah-tahng',
+  yah: 'yah',
+  pelanggannya: 'puh-lahng-gahn-nyah',
+  kecewa: 'kuh-cheh-wah',
+  aduk: 'ah-dook',
+  cabai: 'chah-bye',
   masak: 'mah-sahk',
   memasak: 'muh-mah-sahk',
   cara: 'chah-rah',
@@ -138,6 +146,11 @@ export const EN_VOICE_RESPELL: Record<string, string> = {
   'sup wortel': 'soop wor-tell',
   'telur rebus': 'tuh-loor reh-boos',
   'mie rebus': 'mee-eh reh-boos',
+  'bubur nasi': 'boo-boor nah-see',
+  'bakwan wortel': 'bahk-wahn wor-tell',
+  'mie kuah': 'mee-eh koo-ah',
+  'orak-arik telur': 'oh-rahk ah-rik tuh-loor',
+  'susu hangat': 'soo-soo hah-ngaht',
 
   // Arabic letter names (hijaiyah), as Indonesian children say them. "ha" is
   // already above: ح and ه share it.

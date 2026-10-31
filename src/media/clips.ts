@@ -73,6 +73,7 @@ export const CLIP_IDS = {
   coin: 'ui/coin',
   register: 'ui/register',
   nudge: 'ui/nudge',
+  bell: 'ui/bel-layanan',
   tick: 'ui/hitung-mundur',
   go: 'ui/mulai',
 } as const;
@@ -114,6 +115,10 @@ export const COOK_CLIP_IDS = {
   done: 'cook/jadi',
   cookNow: 'cook/masak-dulu',
   and: 'cook/dan',
+  bell: 'cook/ketuk-bel',
+  welcome: 'cook/selamat-datang',
+  upset: 'cook/kecewa',
+  stir: 'cook/aduk',
 } as const;
 
 /** An ingredient's name, e.g. "cook/bahan/telur". */

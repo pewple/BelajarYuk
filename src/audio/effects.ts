@@ -133,7 +133,7 @@ function playClipNow(url: string, volume = 1): boolean {
 /* The effects                                                         */
 /* ------------------------------------------------------------------ */
 
-export type EffectName = 'pop' | 'tap' | 'chime' | 'coin' | 'register' | 'nudge' | 'tick' | 'go';
+export type EffectName = 'pop' | 'tap' | 'chime' | 'coin' | 'register' | 'nudge' | 'tick' | 'go' | 'bell';
 
 type Effect = {
   /** The recording that replaces it, if one was supplied. */
@@ -201,6 +201,16 @@ const EFFECTS: Record<EffectName, Effect> = {
     make: (ctx) => {
       playTone(ctx, { freq: 523.25, type: 'triangle', duration: 0.14, peak: 0.18 });
       playTone(ctx, { freq: 783.99, type: 'triangle', delay: 0.12, duration: 0.3, peak: 0.2 });
+    },
+  },
+
+  // A counter bell: a bright strike with an overtone that rings on.
+  bell: {
+    clip: CLIP_IDS.bell,
+    make: (ctx) => {
+      playTone(ctx, { freq: 1975.5, type: 'sine', duration: 1.1, peak: 0.17 });
+      playTone(ctx, { freq: 2637, type: 'sine', duration: 0.7, peak: 0.1 });
+      playTone(ctx, { freq: 3951, type: 'sine', duration: 0.35, peak: 0.05 });
     },
   },
 

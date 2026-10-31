@@ -6,9 +6,9 @@ Sembilan permainan: **Mengenal Huruf**, **Belajar Bicara**, **Berhitung 1–10**
 bentuk berwarna), **Memori** (mencari pasangan kartu), **Labirin** (mengikuti urutan
 huruf atau angka sampai ke tujuan), **Kasir** (menghitung uang kembalian selangkah
 demi selangkah), dan **Memasak** (mengikuti resep: berurutan, menunggu matang, dan dua
-masakan sekaligus). Huruf dan angka bisa ditulis Latin atau Arab (hijaiyah).
+masakan sekaligus, mengaduk, dan "kalau pelanggan suka pedas"). Huruf dan angka bisa ditulis Latin atau Arab (hijaiyah).
 
-Nomor versi (`v1.3.0`, dari `package.json`) tampil kecil di pojok kanan atas setiap
+Nomor versi (`v1.4.0`, dari `package.json`) tampil kecil di pojok kanan atas setiap
 halaman. Di bawah layar utama ada catatan singkat untuk orang tua: aplikasi bisa dipasang
 dan dibuka tanpa internet, berjalan hanya di perangkat ini, **tanpa cookie**, tanpa akun,
 tanpa pelacak, dan tidak mengirim data ke mana pun (pengaturan dan catatan belajar disimpan
@@ -135,7 +135,7 @@ src/
   data/memori.ts           Aturan Memori: memilih pasangan, mengocok, membalik kartu
   data/memasak.ts          Aturan Memasak: resep, lemari bahan, kompor dan waktu (tanpa jam sendiri)
   media/memasakVoice.ts    "Ayo masak ...", nama bahan dan masakan, "Tunggu ya!", "Gosong!"
-  components/KitchenParts  Kartu resep, tombol bahan, tombol kompor
+  components/KitchenParts  Pelanggan, bel, kartu resep (dengan panci dan sendok), tombol bahan
   data/tracing.ts          Aturan mengikuti garis dengan jari, dan daftar yang bisa ditelusuri
   data/glyphsLatin.ts      Garis huruf besar, huruf kecil, dan angka
   data/glyphsArabic.ts     Garis huruf hijaiyah dan angka Arab (perlu diperiksa penulis Arab)
@@ -490,7 +490,7 @@ pembanding. Parameter lain: `?kind=hijaiyah`, `?ids=بتث`, `?size=260`, `?font
 tangan mengikuti font Arab sistem dan hanya diperiksa dengan mata terhadap font itu —
 bentuk tegak ala buku Iqra', bukan kaligrafi. Urutan goresan dan arah (kanan ke kiri,
 badan huruf dulu lalu titiknya) mengikuti kebiasaan umum, tetapi belum dicek penulis Arab.
-Bentuk yang paling perlu dilihat: ه (dua lobus), ع/غ, ك, ص/ض, ط/ظ, dan angka ٣. Koreksi cukup
+Bentuk ج ح خ (lengan pendek dan perut yang keluar dari titik yang sama) dan د ذ (lengkung dari atas ke dasar) sudah digambar ulang mengikuti garis tengah font; yang paling perlu dilihat sekarang: ه (dua lobus), ع/غ, ك, ص/ض, ط/ظ, dan angka ٣. Koreksi cukup
 mengubah angka di `glyphsArabic.ts`; tes menjaga jumlah titik tiap huruf dan arahnya.
 
 **Memori: mencari pasangan.** Kartu tertelungkup. Anak membalik satu, lalu satu lagi:
@@ -519,37 +519,63 @@ sudah lulus tidak mendapat hitung mundur ini. Rekaman sendiri: `phrases/lihat-du
 dicatat (ulangan berjarak) dan dimasukkan lebih dulu ke ronde berikutnya. Tombol *Kocok
 ulang* mengocok lagi ronde yang sama.
 
-**Memasak: mengikuti resep.** Modul terakhir di layar utama (setelah Kasir), untuk anak 3-4 tahun
+**Memasak: melayani pelanggan.** Modul terakhir di layar utama (setelah Kasir), untuk anak 3-4 tahun
 sebagai tingkat awal. Resep selalu **gambar berurutan** (tanpa membaca): bahan apa masuk dulu,
-dan di mana ada langkah masak (api + jumlah detik). Dua sampai lima bahan per resep. Pertama
-dipilih caranya (diucapkan: "Pilih cara memasak!"), lalu resep datang satu per satu dalam
-urutan tetap dan mengulang di akhir:
+di mana ada langkah aduk (sendok + jumlah kali) dan masak (api + jumlah detik). Dua sampai lima
+bahan per resep. Pertama dipilih caranya (diucapkan: "Pilih cara memasak!"), lalu resep datang
+satu per satu dalam urutan tetap dan mengulang di akhir.
 
-1. **Susun** (5 resep, 2-3 bahan): bahan dimasukkan sesuai urutan kartu resep — roti, keju,
-   roti. Tidak ada kompor. Lemari bahan *persis* sama dengan kebutuhan (titik oranye = sisa),
-   ditambah satu bahan yang tidak dipakai sebagai pengecoh.
-2. **Tunggu** (6 resep, satu langkah masak 3-5 detik): setelah bahan masuk, ketuk kompor;
+**Bel layanan.** Setiap resep (dan setiap tingkat) dimulai dengan **hanya sebuah bel** di meja:
+"Ketuk bel!". Mengetuknya berbunyi *ting*, lalu **pelanggan** muncul di atas ("Selamat datang! Ayo
+masak ..."), disusul pesanannya dan seluruh dapur. Pelanggan datang bergiliran (Ibu, Bapak, Kakak,
+Nenek, Adik, Kakek).
+
+**Pelanggan tidak menunggu selamanya.** Di bawah namanya ada bilah kesabaran yang mengosong
+(60 detik di Susun, 75 di Tunggu, 100 di Dua sekaligus dan Aduk, 90 di Kalau) dan wajahnya
+berubah dari senyum, ke datar, ke cemberut. Bila habis: "Yah, pelanggannya kecewa. Coba lagi!"
+(lembut, tanpa bunyi marah), dihitung satu kesalahan, lalu bel muncul lagi untuk pesanan yang
+sama dari awal. Pelanggan yang sudah dilayani tersenyum. Untuk anak yang masih dipandu,
+pelanggannya **sabar**: bilah turun sampai 35% lalu berhenti dan tak pernah pergi.
+
+**Panci dan sendok sejajar dengan resepnya.** Tiap masakan punya tombol **panci** sendiri di ujung
+barisnya (dan **sendok** bila ada langkah aduk), jadi yang diketuk selalu di samping resep yang
+bersangkutan; tidak ada kompor terpisah.
+
+Lima tingkat, masing-masing menambah satu gagasan:
+
+1. **Susun** (5 resep, 2-3 bahan): bahan dimasukkan sesuai urutan kartu resep. Tidak ada panci.
+   Lemari bahan *persis* sama dengan kebutuhan (titik oranye = sisa), ditambah pengecoh.
+2. **Tunggu** (6 resep, satu langkah masak 3-5 detik): setelah bahan masuk, ketuk panci masakan itu;
    cincin terisi sambil menghitung detik; saat matang berbunyi ("Sudah matang! Ketuk!") dan
    diangkat dengan satu ketukan. Diketuk terlalu cepat = "Tunggu ya!" (tidak dihitung salah).
-   Dibiarkan terlalu lama (6 detik setelah matang) = **gosong**: dibuang, resep mulai lagi dari
-   awal, bahan yang sudah masuk hilang.
-3. **Dua sekaligus** (3 pesanan, dua masakan, dua kompor): mulai memasak yang satu, lalu
-   kerjakan yang lain selagi menunggu. Bahan yang sama (telur) dipakai bersama dari satu lemari.
+   Dibiarkan 6 detik setelah matang = **gosong**: dibuang, resep mulai lagi dari awal.
+3. **Dua sekaligus** (3 pesanan, dua masakan, dua panci): mulai memasak yang satu, lalu kerjakan
+   yang lain selagi menunggu. Bahan yang sama (telur) dipakai bersama dari satu lemari.
+4. **Aduk** (5 resep): langkah yang **berulang** — "aduk 2-4 kali". Satu ketukan sendok = satu
+   aduk, dihitung dengan suara ("satu, dua, tiga") dan titik di sendok; setelah cukup, lanjut ke
+   masak. Ini pengulangan (*loop*) paling sederhana. Gosong mengulang aduknya juga.
+5. **Kalau** (6 pelanggan, 3 masakan): langkah yang **bergantung pada pelanggan** (*if/else*).
+   Di samping pelanggan ada tanda apa yang ia suka (cabai dengan centang = suka pedas, dengan
+   silang = tidak); di kartu resep tertulis "kalau suka pedas → cabai, kalau tidak → telur".
+   Masakan yang sama datang dua kali, untuk pelanggan yang suka dan yang tidak, jadi jawabannya
+   berbeda. Dua pilihan itu selalu ada di lemari. Untuk usia 5-7 tahun.
 
 **Sumber daya terbatas.** Setiap bahan yang dipakai mengurangi titiknya. Di tingkat yang bisa
 gosong, tiap bahan punya **satu cadangan**; bila gosong dua kali dan bahan habis, muncul
 "Habis! Ayo belanja lagi!" dan lemari diisi penuh lagi (tidak pernah buntu). Bahan yang salah
 tidak terpakai sama sekali.
 
-**Salah itu lembut**: bunyi pelan, "Cari telur!", dan bahan yang benar menyala. Petunjuk memudar
-seperti permainan lain: anak baru melihat langkah berikutnya di kartu resep, bahan/kompor yang
-harus diketuk menyala, dan **masakannya tidak bisa gosong**; setelah 3 pilihan benar berturut-turut
-semuanya hilang (gosong mulai berlaku), dan setelah 2 salah (bahan keliru, atau gosong) kembali.
-Aturan murni ada di `data/memasak.ts` (semua fungsi waktu menerima `now`, tanpa jam sendiri,
-jadi diuji tanpa menunggu); layar mengetik jam tiap 0,1 detik hanya selama ada yang di atas kompor.
-Rekaman sendiri: `cook/bahan/<id>`, `cook/menu/<id>`, `cook/ayo-masak`, `cook/tunggu`, `cook/matang`,
-`cook/gosong` dll. (lihat `#media`); gambar sendiri `cook/bahan/<id>` dan `cook/menu/<id>`. Nasi dan mie
-punya ikon buatan sendiri (`components/drawnIcons.ts`).
+**Salah itu lembut**: bunyi pelan, "Cari telur!" (atau "Aduk!"), dan bahan/sendok/panci yang benar
+menyala. Petunjuk memudar seperti permainan lain: anak baru melihat langkah berikutnya di kartu
+resep, yang harus diketuk menyala, **masakannya tidak bisa gosong**, dan pelanggannya sabar;
+setelah 3 pilihan benar berturut-turut semuanya hilang (gosong dan kesabaran mulai berlaku), dan
+setelah 2 salah (bahan keliru, gosong, atau pelanggan pergi) kembali. Aturan murni ada di
+`data/memasak.ts` (semua fungsi waktu menerima `now`, tanpa jam sendiri, jadi diuji tanpa menunggu);
+layar mengetik jam tiap 0,1 detik hanya selama pelanggan menunggu. Rekaman sendiri: `cook/bahan/<id>`,
+`cook/menu/<id>`, `ui/bel-layanan`, `cook/ketuk-bel`, `cook/selamat-datang`, `cook/aduk`, `cook/kecewa`,
+`cook/tunggu`, `cook/matang`, `cook/gosong` dll. (lihat `#media`); gambar sendiri `cook/bahan/<id>` dan
+`cook/menu/<id>`. Nasi, mie, cabai, sendok, dan bel punya ikon buatan sendiri
+(`components/drawnIcons.ts`).
 
 **Penguatan positif.** Penyelesaian memicu konfeti, arpeggio nada mayor, angka
 yang berubah dari "?" menjadi jumlahnya, dan pujian singkat yang dirotasi

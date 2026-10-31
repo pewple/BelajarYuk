@@ -1,7 +1,7 @@
 {
   "name": "belajar-yuk",
   "private": true,
-  "version": "1.3.0",
+  "version": "1.4.0",
   "type": "module",
   "description": "Aplikasi belajar interaktif Bahasa Indonesia untuk balita usia 3 tahun",
   "scripts": {

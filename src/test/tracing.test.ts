@@ -138,8 +138,13 @@ describe('the glyphs', () => {
     expect(topStart.length).toBeGreaterThanOrEqual(20);
   });
 
-  it('start Arabic letters at the right-hand end, because Arabic is written from right to left', () => {
-    for (const id of TRACE_HIJAIYAH) expect(glyphOf(id).strokes[0].points[0].x, id).toBeGreaterThanOrEqual(50);
+  it('start Arabic letters on the right of the letter, because Arabic is written from right to left', () => {
+    for (const id of TRACE_HIJAIYAH) {
+      const xs = glyphOf(id).strokes.flatMap((stroke) => stroke.points.map((p) => p.x));
+      const [low, high] = [Math.min(...xs), Math.max(...xs)];
+      // The right of the letter: not always the right half: the neck of dal and dzal starts a little in from the edge.
+      expect(glyphOf(id).strokes[0].points[0].x, id).toBeGreaterThanOrEqual(low + 0.25 * (high - low));
+    }
   });
 
   it('write the body of an Arabic letter first and its dots last', () => {

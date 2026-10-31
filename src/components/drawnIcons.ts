@@ -61,3 +61,23 @@ export const Noodles = createLucideIcon('noodles', [
   ['path', { d: 'M8 6c1.2-1.6 2.4-1.6 3.6 0s2.4 1.6 3.6 0', key: 'w2' }],
   ['path', { d: 'M8 21h8', key: 'foot' }],
 ]);
+
+/** A chilli pepper with its stalk - cabai, and "pedas". */
+export const Chili = createLucideIcon('chili', [
+  ['path', { d: 'M5 19c0-8 4-13 10-13 1.6 0 2.6.8 2.6 2.2 0 1.6-1.8 2.2-3 2.8-1.4.8-1.6 2.4-2.4 4.2C11 17.6 8.6 20 5 19Z', key: 'body' }],
+  ['path', { d: 'M15 6c.4-1.8 1.4-3 3-3.4', key: 'stalk' }],
+]);
+
+/** A cooking spoon - stir. */
+export const Spoon = createLucideIcon('spoon', [
+  ['ellipse', { cx: '8.5', cy: '8', rx: '4.5', ry: '5.5', transform: 'rotate(-30 8.5 8)', key: 'bowl' }],
+  ['path', { d: 'm11.5 12.5 8 8', key: 'handle' }],
+]);
+
+/** A service bell, as on a counter - ding. */
+export const CounterBell = createLucideIcon('counter-bell', [
+  ['path', { d: 'M4 17a8 8 0 0 1 16 0Z', key: 'dome' }],
+  ['path', { d: 'M12 9V6', key: 'stem' }],
+  ['path', { d: 'M10 6h4', key: 'knob' }],
+  ['path', { d: 'M3 20.5h18', key: 'base' }],
+]);

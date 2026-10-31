@@ -1,4 +1,4 @@
-import { INGREDIENTS } from '../data/memasak';
+import { INGREDIENTS, dishBase } from '../data/memasak';
 import type { Recipe } from '../data/memasak';
 import { COOK_CLIP_IDS, dishClipId, ingredientClipId } from './clips';
 import type { Part } from './voiceParts';
@@ -11,7 +11,7 @@ export function ingredientPart(id: string): Part {
 
 /** One dish's name. */
 export function dishPart(recipe: Recipe): Part {
-  return { clip: dishClipId(recipe.id), text: recipe.name };
+  return { clip: dishClipId(dishBase(recipe)), text: recipe.name };
 }
 
 /** "Pilih cara memasak!" - the screen before the cooking starts. */
@@ -49,6 +49,14 @@ export const findLine = (id: string): Part[] => {
 /** "Nasi goreng jadi!" */
 export const doneLine = (recipe: Recipe): Part[] => [dishPart(recipe), { clip: COOK_CLIP_IDS.done, text: 'jadi!' }];
 
+/** "Ketuk bel!" - a customer is waiting to come in. */
+export const bellLine = (): Part[] => [{ clip: COOK_CLIP_IDS.bell, text: 'Ketuk bel!' }];
+/** "Selamat datang!" - the customer is at the counter. */
+export const welcomeLine = (): Part[] => [{ clip: COOK_CLIP_IDS.welcome, text: 'Selamat datang!' }];
+/** The customer gave up waiting. */
+export const upsetLine = (): Part[] => [{ clip: COOK_CLIP_IDS.upset, text: 'Yah, pelanggannya kecewa. Coba lagi!' }];
+/** "Aduk!" - what to do when a dish is waiting to be stirred. */
+export const stirLine = (): Part[] => [{ clip: COOK_CLIP_IDS.stir, text: 'Aduk!' }];
 export const cookNowLine = (): Part[] => [{ clip: COOK_CLIP_IDS.cookNow, text: 'Masak dulu!' }];
 export const waitLine = (): Part[] => [{ clip: COOK_CLIP_IDS.wait, text: 'Tunggu ya!' }];
 export const readyLine = (): Part[] => [{ clip: COOK_CLIP_IDS.ready, text: 'Sudah matang! Ketuk!' }];
