@@ -1,14 +1,17 @@
 # Belajar Yuk!
 
 Aplikasi belajar interaktif berbahasa Indonesia untuk balita usia ±3 tahun.
-Sembilan permainan: **Mengenal Huruf**, **Belajar Bicara**, **Berhitung 1–10**,
+Sepuluh modul: **Mengenal Huruf**, **Belajar Bicara**, **Berhitung 1–10**,
 **Menulis** (menelusuri huruf dan angka dengan jari), **Pola** (melanjutkan barisan
 bentuk berwarna), **Memori** (mencari pasangan kartu), **Labirin** (mengikuti urutan
 huruf atau angka sampai ke tujuan), **Kasir** (menghitung uang kembalian selangkah
 demi selangkah), dan **Memasak** (mengikuti resep: berurutan, menunggu matang, dan dua
-masakan sekaligus, mengaduk, dan "kalau pelanggan suka pedas"). Huruf dan angka bisa ditulis Latin atau Arab (hijaiyah).
+masakan sekaligus, mengaduk, dan "kalau pelanggan suka pedas"), dan **Kuda** (belo, anak kuda
+3D, yang bisa berjalan, berlari, berbelok, dan berdiri, diberi wortel atau apel, diganti warna dan
+corak kulit serta warna rambutnya, atau ditukar dengan anak poni, kuda dewasa, atau unikorn, semuanya dengan **bintang**: setiap
+jawaban benar menambah satu bintang). Huruf dan angka bisa ditulis Latin atau Arab (hijaiyah).
 
-Nomor versi (`v1.4.0`, dari `package.json`) tampil kecil di pojok kanan atas setiap
+Nomor versi (`v1.5.0`, dari `package.json`) tampil kecil di pojok kanan atas setiap
 halaman. Di bawah layar utama ada catatan singkat untuk orang tua: aplikasi bisa dipasang
 dan dibuka tanpa internet, berjalan hanya di perangkat ini, **tanpa cookie**, tanpa akun,
 tanpa pelacak, dan tidak mengirim data ke mana pun (pengaturan dan catatan belajar disimpan
@@ -115,7 +118,7 @@ Lalu buka <http://localhost:5173>.
 
 ## Tumpukan teknologi
 
-React 19 · TypeScript · Vite · Tailwind CSS v4 · lucide-react · Vitest + React Testing Library
+React 19 · TypeScript · Vite · Tailwind CSS v4 · lucide-react · three.js (hanya kuda di modul Kuda) · Vitest + React Testing Library
 
 ## Struktur
 
@@ -158,7 +161,11 @@ src/
   data/session.ts          Batas 15 menit, 5 permainan, 15 detik diam, ...
   data/hints.ts            Petunjuk yang memudar (aturan murni)
   data/review.ts           Tangga ulangan berjarak (Leitner)
-  state/play.tsx           Hitungan permainan per modul -> gerbang tombol rumah
+  state/play.tsx           Hitungan permainan per modul -> gerbang tombol rumah; jawaban benar -> bintang
+  state/stars.ts           Dompet bintang (satu untuk semua modul, hanya di perangkat)
+  data/kuda.ts             Jenis kuda, makanan, warna, corak, harga, apa yang sudah dibeli dan dipakai
+  kuda/pony.ts             Kuda three.js: belo, anak poni, dewasa, unikorn (dari "Horse" oleh typescript.dev)
+  media/kudaVoice.ts       "Ayo main dengan kuda!", "Nyam nyam! Kuda suka wortel!", "Hore, kuda baru!"
   components/ParentGate    Soal penjumlahan untuk orang tua (dinilai otomatis, bisa diketik)
   components/RestBreak     Layar istirahat setelah 15 menit
   components/ScriptToggle  Tombol "ABC | ابت"
@@ -171,7 +178,7 @@ src/
   media/mazeVoice.ts       Kalimat labirin
   components/              ScreenFrame, StepButton, PulseRing, LangToggle, CardArt, MoneyPiece, Celebration,
                            ModeChooser (layar pilihan), RoundButtons (Lanjut, tombol ikon)
-  screens/                 Home, Alphabet, Pronunciation, Counting, Menulis, Pola, Memori, Labirin, Kasir, Memasak, MediaCheck (#media)
+  screens/                 Home, Alphabet, Pronunciation, Counting, Menulis, Pola, Memori, Labirin, Kasir, Memasak, Kuda, MediaCheck (#media)
   test/                    Setup jsdom + tes integrasi
 public/media/              Suara dan gambar sendiri (audio/, images/, manifest.js)
 packaging/                 Berkas untuk pengguna akhir: Perbarui-Media.bat/.ps1, BACA-SAYA.txt
@@ -490,7 +497,7 @@ pembanding. Parameter lain: `?kind=hijaiyah`, `?ids=بتث`, `?size=260`, `?font
 tangan mengikuti font Arab sistem dan hanya diperiksa dengan mata terhadap font itu —
 bentuk tegak ala buku Iqra', bukan kaligrafi. Urutan goresan dan arah (kanan ke kiri,
 badan huruf dulu lalu titiknya) mengikuti kebiasaan umum, tetapi belum dicek penulis Arab.
-Bentuk ج ح خ (lengan pendek dan perut yang keluar dari titik yang sama) dan د ذ (lengkung dari atas ke dasar) sudah digambar ulang mengikuti garis tengah font; yang paling perlu dilihat sekarang: ه (dua lobus), ع/غ, ك, ص/ض, ط/ظ, dan angka ٣. Koreksi cukup
+Bentuk ج ح خ (lengan pendek dan perut yang keluar dari titik yang sama) dan د ذ (lengkung dari atas ke dasar) sudah digambar ulang mengikuti garis tengah font. Juga sudah digambar ulang: س ش (gigi berupa mangkuk kecil, lalu perut dalam), ص ض (lingkaran pipih, gigi kecil, perut), ط ظ (oval di garis dasar, tiang di kirinya), ع غ (seperti ٤: mangkuk kecil dan mangkuk besar, berakhir di kanan bawah), ف (titik diberi jarak), ك (hamzah kecil di dalamnya, dasar melengkung naik), م (ekor turun dari sisi kiri kepala), ه (satu tetes berujung lancip), و (ekor dari sisi kanan kepala), ي (lengkung di atas), dan angka ٢ ٦ (mulai di atas, melengkung turun lalu naik, lalu lurus ke bawah) serta ٤ (seperti tiga terbalik). Yang paling perlu dilihat sekarang: angka ٣. Koreksi cukup
 mengubah angka di `glyphsArabic.ts`; tes menjaga jumlah titik tiap huruf dan arahnya.
 
 **Memori: mencari pasangan.** Kartu tertelungkup. Anak membalik satu, lalu satu lagi:
@@ -576,6 +583,57 @@ layar mengetik jam tiap 0,1 detik hanya selama pelanggan menunggu. Rekaman sendi
 `cook/tunggu`, `cook/matang`, `cook/gosong` dll. (lihat `#media`); gambar sendiri `cook/bahan/<id>` dan
 `cook/menu/<id>`. Nasi, mie, cabai, sendok, dan bel punya ikon buatan sendiri
 (`components/drawnIcons.ts`).
+
+**Bintang.** Setiap jawaban benar di modul mana pun (pola yang tepat, pasangan kartu, langkah
+labirin, goresan yang rapi, kembalian yang pas, bahan yang benar) menambah satu bintang. Jawaban
+salah tidak mengurangi apa-apa. Jumlahnya tampil di layar utama dan di pojok setiap modul, dan
+disimpan hanya di perangkat (`belajar-yuk:bintang`, bersama jumlah bintang yang pernah didapat).
+Di layar utama, kartu permainan yang memberi bintang (Menulis, Pola, Memori, Labirin, Kasir,
+Memasak) punya bintang kecil di pojok kanan atas. Mengenal Huruf, Belajar Bicara, dan Berhitung
+tidak punya jawaban salah, jadi tidak memberi bintang.
+
+**Kuda: hadiahnya.** Modul terakhir di layar utama. Tidak ada yang bisa salah di sini; ini tempat
+bintang dibelanjakan. Kuda 3D bisa **berhenti, jalan, lari, dan lari kencang**, **belok**
+kiri/kanan selama tombolnya ditahan, dan **berdiri** dengan kaki belakang (atau ketuk kudanya).
+Di papan ketik: panah atas/bawah mengganti langkah, kiri/kanan berbelok, spasi berdiri. Kamera
+bisa diputar dengan menyeret dan diperbesar.
+
+- **Makanan** dibeli lalu langsung dimakan: wortel (2 bintang) atau apel (3). Kudanya berhenti,
+  menunduk, menggigit empat kali, lalu mengangkat kepala ("Nyam nyam! Kuda suka wortel!").
+- **Warna** kulit (8 pilihan) dan rambut (8, termasuk pelangi) dibeli sekali (6-20 bintang) dan
+  langsung dipakai; setelah itu bisa diganti bolak-balik tanpa bayar. Cokelat dan hitam milik
+  kudanya sendiri, gratis. Keempat kaki sewarna (tidak ada lagi satu kaki putih).
+- **Corak** kulit, di panel Warna: polos (gratis), **totol** (12: selimut putih di pinggul dengan
+  totol gelap, seperti appaloosa), **belang** (12: bercak putih besar, seperti pinto), dan **bintik**
+  (10: bintik pucat di atas kulit yang sedikit lebih gelap). Corak ikut warna kulit yang dipakai.
+- **Kuda**: **belo** (anak kuda; milik sendiri, gratis) kira-kira dua pertiga tinggi kuda dewasa
+  dengan kaki tiga perempat panjang kaki induknya, badan pendek ramping, kepala besar, surai pendek
+  berdiri, dan ekor pendek. Kamera sama untuk semua kuda, jadi belo memang tampak kecil. **Anak poni** (15 bintang) berkaki pendek,
+  berbadan bulat montok, dan lebih kecil lagi (sedikit di atas separuh tinggi kuda dewasa); **kuda
+  dewasa** (20) seperti "Horse" aslinya; **unikorn** (30) kuda dewasa dengan tanduk spiral berkilau
+  di dahinya. Anak poni memakai id lama poni, jadi poni yang sudah dibeli menjadi anak poni. Dibeli sekali, lalu bisa ditukar
+  bolak-balik tanpa bayar ("Hore, kuda baru!"). Warna ikut dipakai kuda yang mana pun. Mengganti
+  kuda membangun tubuhnya dari awal, jadi butuh sekejap.
+- Bintang kurang: tombolnya bergoyang dan "Bintangnya belum cukup. Ayo main dulu!".
+- Setiap makan, setiap warna baru, dan setiap kuda baru dihitung seperti satu permainan selesai, jadi tombol rumah
+  lepas sendiri setelah lima, sama seperti modul lain.
+
+Kudanya dibuat dari **"Horse" oleh [typescript.dev](https://www.typescript.dev/)**: kuda
+prosedural tanpa model dan tanpa tekstur, dibentuk dari *signed distance fields* lalu diberi
+rangka otomatis saat halaman dibuka. Yang diubah di sini: beberapa umur dari satu anatomi (belo,
+anak poni, dewasa: panjang kaki, panjang dan lebar badan, leher, besar kepala dan wajah, surai, ekor,
+dan ukuran keseluruhan), kepala yang halus **tanpa mata dan tanpa tonjolan mata**, kaki belakang dibentuk ulang (paha berhenti di lutut, betis berbentuk baji lebar yang
+turun ke *hock*, tidak lagi seperti sepasang *shockbreaker*) dan **digerakkan ulang mengikuti foto
+kuda berlari Muybridge**: kaki yang menapak hampir lurus dan terdorong jauh ke belakang, saat
+diangkat *hock* terlipat dan kuku terselip ke atas di belakangnya, lalu tulang kering berayun ke
+depan dan kuku mendarat jauh di bawah perut (dulu sendi lutut dan *hock* dilipat dengan
+perbandingan tetap, sehingga tulang kering selalu tegak dan kuku naik-turun seperti piston), warna kulit dan rambut yang
+bisa diganti tanpa membangun ulang, makanan dan gerak merumput (makanan diletakkan tepat di bawah
+moncong, yang dihitung dari pose menunduk tiap kuda), dan tanpa kontrol orang dewasa
+(x-ray, kecepatan). Kreditnya tertulis di pojok layar Kuda. three.js ikut dibundel (tidak dari
+CDN), jadi tetap jalan tanpa internet. Perangkat tanpa WebGL mendapat pesan, dan warna serta
+kudanya tetap bisa dipilih. Rekaman sendiri: `kuda/ayo-main`, `kuda/nyam`, `kuda/kuda-suka`,
+`kuda/makanan/<wortel|apel>`, `kuda/bintang-kurang`, `kuda/cantik`, `kuda/kuda-baru`.
 
 **Penguatan positif.** Penyelesaian memicu konfeti, arpeggio nada mayor, angka
 yang berubah dari "?" menjadi jumlahnya, dan pujian singkat yang dirotasi

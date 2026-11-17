@@ -27,6 +27,12 @@ dan didampingi orang dewasa; di bawah 2 tahun sebaiknya tanpa layar.
 - [x] Memasak: bel layanan sebelum tiap pelanggan, bilah kesabaran pelanggan, panci dan sendok sejajar dengan resep
 - [x] Gerbang orang tua dinilai otomatis dan bisa diketik di komputer (tanpa tombol centang)
 - [x] Kata Arab di Belajar Bicara berakhiran -un (tanwin)
+- [x] Bintang untuk setiap jawaban benar, di semua modul (disimpan di perangkat)
+- [x] Modul Kuda: belo (anak kuda) 3D (dari "Horse" oleh typescript.dev) yang bisa berjalan, berlari, berbelok, berdiri; wortel dan apel, warna kulit dan rambut, serta kuda poni dan kuda dewasa dibeli dengan bintang
+- [x] Bintang kecil di kartu layar utama untuk permainan yang memberi bintang
+- [x] Kuda: gerak kaki belakang mengikuti foto Muybridge; corak kulit (totol, belang, bintik)
+- [x] Kuda: anak poni (ganti poni) dan unikorn
+- [x] Menulis: hijaiyah س ش ص ض ط ظ ع غ ف ك م ه و ي dan angka ٢ ٤ ٦ digambar ulang mengikuti font
 
 ## Belum / sengaja ditunda
 

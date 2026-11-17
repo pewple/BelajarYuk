@@ -5,11 +5,14 @@ import { HOME_CHOICES } from '../data/navigation';
 import { TOKENS } from '../data/pola';
 import { ARABIC_WORD_CARDS, arabicWordPictureId } from '../data/arabicWords';
 import { INGREDIENTS, allDishes, dishBase } from '../data/memasak';
+import { FOODS } from '../data/kuda';
 import { ARABIC_NUMBER_NAMES, HIJAIYAH, toArabicNumerals } from '../data/scripts';
 import { COUNT_PROMPT_ID, GREETING_ID, LETTER_NAMES_EN, LETTER_NAMES_ID, numberWordId } from '../audio/words';
 import {
   CLIP_IDS,
   COOK_CLIP_IDS,
+  KUDA_CLIP_IDS,
+  kudaFoodClipId,
   MAZE_CLIP_IDS,
   MEMORI_CLIP_IDS,
   MONEY_CLIP_IDS,
@@ -208,6 +211,21 @@ export function buildSlots(): SlotCatalogue {
       {
         title: 'Memasak - nama masakan',
         slots: allDishes().map((recipe) => ({ id: dishClipId(dishBase(recipe)), label: recipe.name, say: recipe.name })),
+      },
+      {
+        title: 'Kuda - kata tetap',
+        slots: [
+          { id: KUDA_CLIP_IDS.hello, label: 'Pembuka', say: 'Ayo main dengan kuda!' },
+          { id: KUDA_CLIP_IDS.yum, label: 'Selesai makan', say: 'Nyam nyam!' },
+          { id: KUDA_CLIP_IDS.likes, label: 'Kuda suka', say: 'Kuda suka' },
+          { id: KUDA_CLIP_IDS.notEnough, label: 'Bintang kurang', say: 'Bintangnya belum cukup. Ayo main dulu!' },
+          { id: KUDA_CLIP_IDS.pretty, label: 'Warna baru', say: 'Wah, cantik!' },
+          { id: KUDA_CLIP_IDS.newHorse, label: 'Kuda baru', say: 'Hore, kuda baru!' },
+        ],
+      },
+      {
+        title: 'Kuda - makanan',
+        slots: FOODS.map((food) => ({ id: kudaFoodClipId(food.id), label: food.name, say: food.name.toLowerCase() })),
       },
       {
         title: 'Kasir - kata tetap',

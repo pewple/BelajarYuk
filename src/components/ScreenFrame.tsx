@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { House, Lock, Volume2 } from 'lucide-react';
 import { ParentGate } from './ParentGate';
+import { StarBadge } from './StarBadge';
 import { usePlay } from '../state/play';
 
 type ScreenFrameProps = {
@@ -61,6 +62,8 @@ export function ScreenFrame({ title, onHome, onRepeat, caption, children }: Scre
           <h1 className="truncate text-2xl font-black text-slate-800 sm:text-3xl">{title}</h1>
           {caption && <p className="truncate text-sm font-semibold text-slate-600">{caption}</p>}
         </div>
+
+        <StarBadge />
 
         {onRepeat && (
           <button

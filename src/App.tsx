@@ -8,6 +8,7 @@ import { CountingScreen } from './screens/CountingScreen';
 import { KasirScreen } from './screens/KasirScreen';
 import { LabirinScreen } from './screens/LabirinScreen';
 import { MasakScreen } from './screens/MasakScreen';
+import { KudaScreen } from './screens/KudaScreen';
 import { MemoriScreen } from './screens/MemoriScreen';
 import { MenulisScreen } from './screens/MenulisScreen';
 import { PolaScreen } from './screens/PolaScreen';
@@ -194,6 +195,9 @@ export default function App() {
       break;
     case 'masak':
       content = <MasakScreen onHome={goHome} />;
+      break;
+    case 'kuda':
+      content = <KudaScreen onHome={goHome} />;
       break;
     case 'home':
     default:

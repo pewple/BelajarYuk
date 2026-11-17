@@ -39,57 +39,69 @@ export const ARABIC_GLYPH_STROKES: Record<string, StrokeDef[]> = {
   'ر': [[M(66, 10), C(76, 40, 64, 72, 28, 90)]],
   'ز': [[M(66, 30), C(74, 54, 62, 78, 28, 92)], dot(46, 14)],
 
-  // Sin and syin: teeth, then a bowl.
-  'س': [[M(90, 44), C(86, 28, 74, 28, 70, 44), C(66, 28, 54, 28, 50, 44), C(46, 28, 34, 28, 30, 44), C(26, 76, 10, 76, 8, 52)]],
-  'ش': [[M(90, 52), C(86, 36, 74, 36, 70, 52), C(66, 36, 54, 36, 50, 52), C(46, 36, 34, 36, 30, 52), C(26, 84, 10, 84, 8, 60)], dot(68, 22), dot(48, 22), dot(58, 8)],
+  // Sin and syin: three teeth - the pen dips to the line and rises to a point, twice - and
+  // from the third point down into a deep bowl that curls up on the left.
+  'س': [[M(92, 30), C(92, 50, 89, 56, 82, 56), C(75, 56, 72, 50, 72, 34), C(72, 50, 69, 56, 62, 56), C(55, 56, 52, 50, 52, 34), C(52, 64, 46, 82, 30, 84), C(16, 85, 8, 74, 8, 56)]],
+  'ش': [[M(92, 40), C(92, 60, 89, 66, 82, 66), C(75, 66, 72, 60, 72, 44), C(72, 60, 69, 66, 62, 66), C(55, 66, 52, 60, 52, 44), C(52, 74, 46, 92, 30, 94), C(16, 95, 8, 84, 8, 66)], dot(82, 24), dot(62, 24), dot(72, 10)],
 
-  // Shad and dhad: a loop and a tail.
-  'ص': [[A(70, 40, 18, 14, -90, -450)], [M(60, 52), C(44, 62, 26, 68, 10, 60)]],
-  'ض': [[A(70, 48, 18, 14, -90, -450)], [M(60, 60), C(44, 70, 26, 76, 10, 68)], dot(68, 18)],
+  // Shad and dhad: a flat loop drawn round to the right and back, a small tooth, and then
+  // the same deep bowl as sin's - all in one stroke.
+  'ص': [[M(56, 52), C(70, 58, 95, 58, 95, 42), C(95, 26, 72, 24, 58, 36), C(52, 41, 50, 47, 50, 54), C(50, 48, 47, 42, 44, 40), C(44, 62, 38, 84, 24, 84), C(12, 84, 8, 72, 8, 58)]],
+  'ض': [[M(56, 58), C(70, 64, 95, 64, 95, 48), C(95, 32, 72, 30, 58, 42), C(52, 47, 50, 53, 50, 60), C(50, 54, 47, 48, 44, 46), C(44, 68, 38, 90, 24, 90), C(12, 90, 8, 78, 8, 64)], dot(74, 14)],
 
-  // Tha and zha: a loop, a tail along the bottom, and a tall stem standing on the tail.
-  'ط': [[A(72, 66, 20, 17, -90, -450)], [M(72, 83), L(10, 83)], [M(28, 8), L(28, 78)]],
-  'ظ': [[A(72, 66, 20, 17, -90, -450)], [M(72, 83), L(10, 83)], [M(28, 12), L(28, 78)], dot(54, 28)],
+  // Tha and zha: a wide oval sitting on the line - from where it meets the stem, over the top
+  // to the right, round, and back along the bottom past the stem - and then the tall stem.
+  'ط': [[M(44, 56), C(60, 42, 92, 46, 92, 68), C(92, 86, 74, 88, 56, 88), L(22, 88)], [M(36, 8), L(36, 86)]],
+  'ظ': [[M(44, 56), C(60, 42, 92, 46, 92, 68), C(92, 86, 74, 88, 56, 88), L(22, 88)], [M(36, 10), L(36, 86)], dot(66, 28)],
 
-  // Ain and ghain: a small hook, then a bowl that sweeps away to the left.
-  'ع': [[M(80, 14), C(64, 6, 46, 12, 48, 26), C(50, 36, 64, 34, 68, 42), C(76, 56, 70, 78, 50, 84), C(32, 88, 16, 80, 10, 66)]],
-  'غ': [[M(80, 26), C(64, 20, 46, 24, 48, 36), C(50, 45, 64, 43, 68, 51), C(76, 64, 70, 82, 50, 86), C(32, 90, 16, 82, 10, 70)], dot(60, 10)],
+  // Ain and ghain: a small open bowl at the top, back to a point on the right, then a big bowl
+  // that bulges to the left and comes round along the bottom to finish on the right.
+  'ع': [[M(78, 14), C(62, 4, 38, 8, 38, 24), C(38, 38, 54, 44, 70, 42), C(46, 46, 26, 58, 28, 74), C(30, 90, 56, 92, 80, 88)]],
+  'غ': [[M(78, 24), C(62, 14, 38, 18, 38, 32), C(38, 46, 54, 50, 70, 48), C(46, 52, 26, 64, 28, 78), C(30, 92, 56, 94, 80, 90)], dot(58, 7)],
 
   // Fa and qaf: a head with a tail that droops to the left.
-  'ف': [[A(74, 38, 14, 13, -90, -450)], [M(88, 46), L(88, 64), C(88, 80, 74, 86, 56, 86), L(24, 86), C(14, 86, 10, 80, 10, 70)], dot(74, 16)],
+  // (fa's dot sits clear above its head, with a gap between them)
+  'ف': [[A(74, 42, 13, 12, -90, -450)], [M(87, 49), L(87, 64), C(87, 80, 74, 86, 56, 86), L(24, 86), C(14, 86, 10, 80, 10, 70)], dot(74, 12)],
   'ق': [[A(74, 42, 14, 12, -90, -450)], [M(88, 48), L(88, 62), C(88, 92, 46, 94, 16, 78)], dot(80, 16), dot(62, 16)],
 
-  // Kaf: a tall stroke, a base and a little mark.
-  'ك': [[M(84, 8), L(84, 62), C(84, 78, 74, 84, 58, 84), L(14, 84)], [M(50, 36), L(32, 52), L(52, 62)]],
+  // Kaf: a tall stroke and a base that curls up at its left end; inside it a little hamza:
+  // a small bowl open to the right, then a short tail to the lower left.
+  'ك': [[M(84, 8), L(84, 62), C(84, 80, 74, 86, 56, 86), L(30, 86), C(18, 86, 12, 78, 12, 64)], [M(60, 34), C(52, 28, 43, 32, 45, 39), C(47, 45, 54, 46, 59, 46), C(52, 48, 46, 52, 42, 58)]],
 
   // Lam: a tall stroke that curves round into a tail.
   'ل': [[M(84, 8), L(84, 62), C(84, 82, 66, 90, 40, 88), C(26, 87, 16, 82, 10, 74)]],
 
-  // Mim: a head, and a tail that sweeps down to the left.
-  'م': [[A(66, 30, 18, 16, -90, -450)], [M(66, 46), C(68, 68, 54, 86, 26, 90)]],
+  // Mim: a round head, and from its left side a tail that drops almost straight down.
+  'م': [[A(70, 31, 20, 18, -90, -450)], [M(51, 38), C(40, 52, 30, 70, 26, 92)]],
 
   // Nun: a deep bowl with a dot above.
   'ن': [[M(88, 40), A(50, 40, 38, 44, 0, 180)], dot(50, 16)],
 
-  // Ha: two lobes.
-  'ه': [[M(58, 56), C(80, 40, 74, 14, 54, 14), C(34, 14, 36, 36, 50, 46), C(30, 48, 22, 68, 38, 82), C(58, 92, 78, 74, 58, 56)]],
+  // Ha: a single teardrop loop, pointed at the top - down the right side, round the bottom,
+  // and up the left side back to the point.
+  'ه': [[M(42, 10), C(56, 22, 80, 44, 80, 64), C(80, 82, 66, 90, 50, 90), C(32, 90, 20, 80, 20, 64), C(20, 46, 30, 28, 42, 10)]],
 
-  // Waw: a head, and a tail that curves down to the left.
-  'و': [[A(68, 30, 18, 16, -90, -450)], [M(68, 46), C(70, 70, 56, 88, 26, 92)]],
+  // Waw: a small round head drawn from its right side, up and over and round, and then from
+  // that same right side a tail that curves down and away to the left.
+  'و': [[M(88, 40), C(90, 20, 76, 10, 64, 11), C(50, 12, 44, 24, 46, 34), C(48, 46, 60, 52, 74, 50), C(82, 49, 87, 46, 88, 40), C(90, 66, 62, 88, 14, 88)]],
 
-  // Ya: a bowl whose tail runs to the left and curls up, with two dots below.
-  'ي': [[M(88, 22), C(88, 46, 78, 58, 56, 58), C(36, 58, 22, 56, 12, 40)], dot(62, 76), dot(40, 76)],
+  // Ya: a curl at the top that comes back down to the right, then a long bowl running to the
+  // left and curling up, with two dots below.
+  'ي': [[M(84, 10), C(70, 14, 60, 22, 62, 34), C(64, 46, 80, 48, 80, 58), C(80, 68, 64, 68, 48, 66), C(30, 66, 12, 58, 12, 34)], dot(62, 82), dot(40, 82)],
 
   // The Arabic-Indic digits, 0 to 9. Zero is a dot: tap it.
   '٠': [dot(50, 50)],
   '١': [[M(50, 10), L(50, 90)]],
-  // Two is a hook like a capital gamma; six is a seven with a curved stem. Three
-  // is a long stem with a wave of two teeth beside it.
-  '٢': [[M(70, 11), L(36, 11), L(40, 91)]],
+  // Two starts at the top right, dips down and comes back up in a small cup to the top
+  // left, then goes straight down; six is its mirror image. Three is a long stem with a
+  // wave of two teeth beside it.
+  '٢': [[M(80, 10), C(76, 30, 50, 32, 40, 10), L(42, 92)]],
   '٣': [[M(27, 9), L(34, 91)], [M(34, 33), C(40, 37, 45, 35, 46, 28), L(46, 10)], [M(47, 34), C(56, 40, 70, 38, 74, 30), L(74, 10)]],
-  '٤': [[M(58, 10), C(34, 24, 32, 40, 46, 46), C(64, 52, 72, 66, 62, 78), C(54, 88, 40, 90, 28, 86)]],
+  // Four is like a reversed three: a small bowl, back to a point on the right, and a bigger
+  // bowl below it - both bulging to the left - finishing at the bottom right.
+  '٤': [[M(70, 12), C(52, 4, 30, 10, 32, 26), C(34, 40, 50, 44, 64, 42), C(42, 46, 24, 58, 26, 74), C(28, 90, 54, 92, 76, 86)]],
   '٥': [[A(50, 50, 28, 32, -90, -450)]],
-  '٦': [[M(24, 13), L(62, 13), C(64, 40, 70, 70, 76, 92)]],
+  '٦': [[M(20, 10), C(24, 30, 50, 32, 60, 10), L(64, 92)]],
   '٧': [[M(24, 12), L(50, 90), L(76, 12)]],
   '٨': [[M(24, 90), L(50, 12), L(76, 90)]],
   '٩': [[A(46, 32, 20, 21, 0, -360), C(66, 52, 70, 74, 78, 92)]],

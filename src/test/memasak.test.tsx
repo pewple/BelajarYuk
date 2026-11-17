@@ -75,7 +75,7 @@ afterEach(() => vi.useRealTimers());
 
 describe('Memasak', () => {
   describe('opening it', () => {
-    it('is the last card on the home screen, after Kasir', () => {
+    it('is on the home screen after Kasir, just before Kuda', () => {
       render(<App />);
       const titles = ['Kasir', 'Memasak'];
       const order = screen
@@ -85,7 +85,7 @@ describe('Memasak', () => {
 
       expect(order).toEqual(titles);
       const all = screen.getAllByRole('button');
-      expect(all[all.length - 1]).toHaveTextContent('Memasak');
+      expect(all[all.length - 2]).toHaveTextContent('Memasak');
     });
 
     it('asks first how to cook, out loud and in writing: five ways, and no kitchen yet', async () => {

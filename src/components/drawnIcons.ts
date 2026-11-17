@@ -81,3 +81,20 @@ export const CounterBell = createLucideIcon('counter-bell', [
   ['path', { d: 'M10 6h4', key: 'knob' }],
   ['path', { d: 'M3 20.5h18', key: 'base' }],
 ]);
+
+/** A pony's head in profile, mane and all - the Kuda card. */
+export const Pony = createLucideIcon('pony', [
+  ['path', { d: 'M6 22c-.6-5 .4-9.6 3-13l-.6-5 2.7 3c2.4-.2 4.6 1.2 6 3.6l3.5 4.6c.8 1.2 0 2.7-1.5 2.5L15.4 16.4c-1.2 1.4-1.6 3.4-1.2 5.6', key: 'head' }],
+  ['path', { d: 'M9 9c-2 1.2-3.3 3.7-3.7 6.6', key: 'mane1' }],
+  ['path', { d: 'M8.8 12.6c-1.1 1-1.8 2.5-2 4.4', key: 'mane2' }],
+  ['circle', { cx: '19.4', cy: '15.6', r: '0.6', key: 'nostril' }],
+]);
+
+/** The pony's head with a horn on its forehead - the unicorn in Kuda. */
+export const UnicornHead = createLucideIcon('unicorn-head', [
+  ['path', { d: 'M6 22c-.6-5 .4-9.6 3-13l-.6-5 2.7 3c2.4-.2 4.6 1.2 6 3.6l3.5 4.6c.8 1.2 0 2.7-1.5 2.5L15.4 16.4c-1.2 1.4-1.6 3.4-1.2 5.6', key: 'head' }],
+  ['path', { d: 'M9 9c-2 1.2-3.3 3.7-3.7 6.6', key: 'mane1' }],
+  ['path', { d: 'M8.8 12.6c-1.1 1-1.8 2.5-2 4.4', key: 'mane2' }],
+  ['circle', { cx: '19.4', cy: '15.6', r: '0.6', key: 'nostril' }],
+  ['path', { d: 'M13.6 7.4 18.5 1.5 15.2 8.6', key: 'horn' }],
+]);

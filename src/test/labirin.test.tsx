@@ -88,7 +88,7 @@ describe('Labirin', () => {
     it('sits after Memori and before Kasir', () => {
       render(<App />);
 
-      const titles = ['Mengenal Huruf', 'Belajar Bicara', 'Berhitung', 'Menulis', 'Pola', 'Memori', 'Labirin', 'Kasir', 'Memasak'];
+      const titles = ['Mengenal Huruf', 'Belajar Bicara', 'Berhitung', 'Menulis', 'Pola', 'Memori', 'Labirin', 'Kasir', 'Memasak', 'Kuda'];
       const order = screen
         .getAllByRole('button')
         .map((button) => titles.find((title) => button.textContent?.includes(title)));

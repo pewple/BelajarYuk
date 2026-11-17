@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { UNLOCK_AFTER_FAILURES, UNLOCK_AFTER_GAMES } from '../data/session';
+import { earnStars } from './stars';
 
 /**
  * How much has been played in the module the child is in right now.
@@ -15,7 +16,7 @@ import { UNLOCK_AFTER_FAILURES, UNLOCK_AFTER_GAMES } from '../data/session';
  * unlocks it for the rest of the visit.
  *
  * With no provider (a screen rendered on its own) nothing is gated and
- * nothing is counted.
+ * nothing is counted - and no stars are earned.
  */
 export type PlayState = {
   /** Games finished in this visit. */
@@ -24,7 +25,10 @@ export type PlayState = {
   homeUnlocked: boolean;
   /** Three wrong answers in a row have happened in this visit. */
   struggling: boolean;
-  /** One choice was made: right or wrong. Only the games that can be got wrong report these. */
+  /**
+   * One choice was made: right or wrong. Only the games that can be got wrong
+   * report these. Every right one also earns a star (see state/stars.ts).
+   */
   reportAttempt: (correct: boolean) => void;
   /**
    * A game was finished. Give an `id` when the same game could be reported
@@ -66,6 +70,8 @@ export function PlayProvider({ resetKey, onGame, children }: PlayProviderProps) 
 
   const reportAttempt = useCallback(
     (correct: boolean) => {
+      // Outside the updater: React may run an updater twice, and a star must not be paid twice.
+      if (correct) earnStars(1);
       setAttempts((prev) => {
         const base = prev.key === resetKey ? prev : { key: resetKey, streak: 0, struggling: false };
         if (correct) return { ...base, streak: 0 };

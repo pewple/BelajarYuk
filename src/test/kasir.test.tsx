@@ -80,9 +80,9 @@ describe('Kasir', () => {
       render(<App />);
 
       const cards = screen.getAllByRole('button');
-      expect(cards).toHaveLength(9);
-      expect(cards[cards.length - 2]).toHaveTextContent('Kasir');
-      expect(cards[cards.length - 1]).toHaveTextContent('Memasak');
+      expect(cards).toHaveLength(10);
+      expect(cards[cards.length - 3]).toHaveTextContent('Kasir');
+      expect(cards[cards.length - 2]).toHaveTextContent('Memasak');
     });
 
     it('opens on the first customer and returns home', async () => {

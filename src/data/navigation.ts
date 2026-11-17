@@ -1,5 +1,6 @@
 import { Calculator, ChefHat, Footprints, HandCoins, LayoutGrid, MessageCircleHeart, PencilLine, Shapes, Type } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { Pony } from '../components/drawnIcons';
 import type { ScreenId } from '../types';
 
 export type HomeChoice = {
@@ -10,6 +11,8 @@ export type HomeChoice = {
   glyph: string;
   icon: LucideIcon;
   theme: string;
+  /** Right answers here earn stars (the games that can be got wrong). */
+  givesStars?: boolean;
 };
 
 export const HOME_CHOICES: HomeChoice[] = [
@@ -40,6 +43,7 @@ export const HOME_CHOICES: HomeChoice[] = [
     glyph: 'A 7',
     icon: PencilLine,
     theme: 'from-emerald-600 to-green-700',
+    givesStars: true,
   },
   {
     id: 'pola',
@@ -47,6 +51,7 @@ export const HOME_CHOICES: HomeChoice[] = [
     glyph: '● ■ ▲',
     icon: Shapes,
     theme: 'from-fuchsia-600 to-pink-700',
+    givesStars: true,
   },
   {
     id: 'memori',
@@ -54,6 +59,7 @@ export const HOME_CHOICES: HomeChoice[] = [
     glyph: '? ?',
     icon: LayoutGrid,
     theme: 'from-indigo-600 to-violet-700',
+    givesStars: true,
   },
   {
     id: 'labirin',
@@ -61,6 +67,7 @@ export const HOME_CHOICES: HomeChoice[] = [
     glyph: 'A → B',
     icon: Footprints,
     theme: 'from-sky-600 to-indigo-700',
+    givesStars: true,
   },
   {
     id: 'kasir',
@@ -68,6 +75,7 @@ export const HOME_CHOICES: HomeChoice[] = [
     glyph: 'Rp',
     icon: HandCoins,
     theme: 'from-amber-600 to-orange-700',
+    givesStars: true,
   },
   {
     id: 'masak',
@@ -75,5 +83,13 @@ export const HOME_CHOICES: HomeChoice[] = [
     glyph: 'Nasi',
     icon: ChefHat,
     theme: 'from-orange-500 to-rose-600',
+    givesStars: true,
+  },
+  {
+    id: 'kuda',
+    title: 'Kuda',
+    glyph: '★',
+    icon: Pony,
+    theme: 'from-lime-600 to-emerald-700',
   },
 ];

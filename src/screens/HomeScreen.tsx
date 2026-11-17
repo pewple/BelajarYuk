@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
+import { Star } from 'lucide-react';
 import type { ScreenId } from '../types';
 import { HOME_CHOICES } from '../data/navigation';
 import { AppNotice } from '../components/AppNotice';
 import { CardArt } from '../components/CardArt';
+import { StarBadge } from '../components/StarBadge';
 import { homePicture } from '../media/pictures';
 import { useAudio } from '../hooks/useAudio';
 
@@ -56,13 +58,15 @@ export function HomeScreen({ onChoose, showVoiceNotice }: HomeScreenProps) {
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-amber-50 px-4 py-8">
-      <header className="mb-6 text-center sm:mb-8">
+      <header className="mb-6 flex flex-col items-center text-center sm:mb-8">
         <h1 className="text-4xl font-black tracking-tight text-slate-800 sm:text-6xl">
           Belajar Yuk!
         </h1>
         <p className="mt-1 text-base font-bold text-slate-500 sm:mt-2 sm:text-lg">
           Pilih permainan
         </p>
+        {/* Every right answer anywhere lands here; Kuda is where they are spent. */}
+        <StarBadge className="mt-3" />
       </header>
 
       {/*
@@ -80,8 +84,17 @@ export function HomeScreen({ onChoose, showVoiceNotice }: HomeScreenProps) {
             onClick={() => onChoose(choice.id)}
             /* min-h tuned so every card fits a phone screen without scrolling -
                a choice a pre-reader cannot see is no choice. */
-            className={`toddler-tap flex min-h-32 w-[calc(50%_-_0.5rem)] flex-col items-center justify-center gap-1 rounded-[2.5rem] bg-gradient-to-br ${choice.theme} px-3 py-3 text-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 sm:min-h-72 sm:w-[calc((100%_-_2rem)/3)] sm:gap-3 sm:py-8 lg:w-[calc((100%_-_3rem)/4)]`}
+            className={`toddler-tap relative flex min-h-32 w-[calc(50%_-_0.5rem)] flex-col items-center justify-center gap-1 rounded-[2.5rem] bg-gradient-to-br ${choice.theme} px-3 py-3 text-white shadow-xl outline-none focus-visible:ring-4 focus-visible:ring-slate-800 active:scale-95 sm:min-h-72 sm:w-[calc((100%_-_2rem)/3)] sm:gap-3 sm:py-8 lg:w-[calc((100%_-_3rem)/4)]`}
           >
+            {/* A quiet mark on the games whose right answers earn stars. */}
+            {choice.givesStars && (
+              <Star
+                data-gives-stars="true"
+                aria-hidden="true"
+                className="absolute top-3 right-3 size-5 fill-amber-300/90 text-amber-100/90 drop-shadow-sm sm:top-5 sm:right-5 sm:size-6"
+                strokeWidth={1.6}
+              />
+            )}
             <CardArt
               icon={choice.icon}
               picture={homePicture(choice.id)}

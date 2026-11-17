@@ -121,6 +121,21 @@ export const COOK_CLIP_IDS = {
   stir: 'cook/aduk',
 } as const;
 
+/** The few fixed words of Kuda, where the stars are spent on the horse. */
+export const KUDA_CLIP_IDS = {
+  hello: 'kuda/ayo-main',
+  yum: 'kuda/nyam',
+  likes: 'kuda/kuda-suka',
+  notEnough: 'kuda/bintang-kurang',
+  pretty: 'kuda/cantik',
+  newHorse: 'kuda/kuda-baru',
+} as const;
+
+/** A food's name in Kuda, e.g. "kuda/makanan/wortel". */
+export function kudaFoodClipId(id: string): string {
+  return `kuda/makanan/${id}`;
+}
+
 /** An ingredient's name, e.g. "cook/bahan/telur". */
 export function ingredientClipId(id: string): string {
   return `cook/bahan/${id}`;

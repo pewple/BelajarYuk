@@ -5,6 +5,7 @@ import * as React from 'react';
 import { reloadMedia } from '../media/manifest';
 import { HINTS_STORAGE_KEY } from '../data/hints';
 import { setTapLockMs } from '../hooks/useTapLock';
+import { reloadWallet } from '../state/stars';
 
 /**
  * jsdom ships neither the Web Speech API nor the Web Audio API. The hook is
@@ -224,6 +225,8 @@ afterEach(() => {
   } catch {
     /* Storage is optional; the app copes without it and so do the tests. */
   }
+  // The star wallet keeps a copy in memory; it must start empty again too.
+  reloadWallet();
 });
 
 // React's development build captures a stack trace (an Error) for every element it
