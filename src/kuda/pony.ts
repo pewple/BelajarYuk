@@ -263,6 +263,12 @@ export function createPony(canvas: HTMLCanvasElement, colors: PonyColors, events
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+  /* Shadows as "Horse" draws them. This needs three.js r170 (package.json pins it): r170
+     packs the shadow's depth into an ordinary colour texture, which every phone draws. Later
+     versions sample a hardware depth texture instead, and some phone GPUs get that wrong - on
+     a Samsung Galaxy S25 FE the ground, the grass and the horse came out black and blotched,
+     while typescript.dev's own page, on r170, was fine. Do not upgrade three without trying
+     Kuda on such a phone. */
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -317,11 +323,15 @@ export function createPony(canvas: HTMLCanvasElement, colors: PonyColors, events
     bounce.rotation.x = -Math.PI / 2;
     bounce.position.y = -3;
     envScene.add(bounce);
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    envTexture = pmrem.fromScene(envScene, 0, 0.1, 9000).texture;
-    scene.environment = envTexture;
-    scene.environmentIntensity = 0.7;
-    pmrem.dispose();
+    // The sky's reflections are rendered into half-float textures. A GPU that cannot render
+    // to those gets flat ambient light instead (below), rather than a black or NaN-lit horse.
+    if (renderer.extensions.has('EXT_color_buffer_half_float') || renderer.extensions.has('EXT_color_buffer_float')) {
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      envTexture = pmrem.fromScene(envScene, 0, 0.1, 9000).texture;
+      scene.environment = envTexture;
+      scene.environmentIntensity = 0.7;
+      pmrem.dispose();
+    }
     bounce.geometry.dispose();
     (bounce.material as THREE.Material).dispose();
     scene.add(sky);
@@ -338,6 +348,8 @@ export function createPony(canvas: HTMLCanvasElement, colors: PonyColors, events
   sun.shadow.radius = 3;
   scene.add(sun, sun.target);
   scene.add(new THREE.HemisphereLight(0xc4d8f0, 0x5d7038, 1.25));
+  if (!envTexture) scene.add(new THREE.AmbientLight(0xdfe8f0, 0.9));
+
 
   /* ───────────────────────────── environment ───────────────────────────── */
   function groundTexture() {
@@ -891,6 +903,9 @@ export function createPony(canvas: HTMLCanvasElement, colors: PonyColors, events
     const m = new THREE.MeshPhysicalMaterial({
       vertexColors: true, roughness: 0.6, metalness: 0, sheen: 0.5, sheenRoughness: 0.45, sheenColor: new THREE.Color(0xb98a5a),
     });
+    // The fine fur noise needs full-precision floats; on a GPU without them the coat stays plain
+    // rather than turning blotchy.
+    if (renderer.capabilities.precision !== 'highp') return m;
     m.onBeforeCompile = (sh) => {
       sh.vertexShader = sh.vertexShader
         .replace('#include <common>', '#include <common>\nvarying vec3 vRest;')

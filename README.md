@@ -631,7 +631,10 @@ perbandingan tetap, sehingga tulang kering selalu tegak dan kuku naik-turun sepe
 bisa diganti tanpa membangun ulang, makanan dan gerak merumput (makanan diletakkan tepat di bawah
 moncong, yang dihitung dari pose menunduk tiap kuda), dan tanpa kontrol orang dewasa
 (x-ray, kecepatan). Kreditnya tertulis di pojok layar Kuda. three.js ikut dibundel (tidak dari
-CDN), jadi tetap jalan tanpa internet. Perangkat tanpa WebGL mendapat pesan, dan warna serta
+CDN), jadi tetap jalan tanpa internet. Versinya dikunci di **0.170.0**, sama dengan halaman "Horse"
+yang asli: versi yang lebih baru menggambar bayangan dengan tekstur kedalaman perangkat keras, dan
+sebagian GPU ponsel (misalnya Samsung Galaxy S25 FE) menggambarnya hitam. Jangan naikkan versi three
+tanpa mencoba modul Kuda di ponsel seperti itu. Perangkat tanpa WebGL mendapat pesan, dan warna serta
 kudanya tetap bisa dipilih. Rekaman sendiri: `kuda/ayo-main`, `kuda/nyam`, `kuda/kuda-suka`,
 `kuda/makanan/<wortel|apel>`, `kuda/bintang-kurang`, `kuda/cantik`, `kuda/kuda-baru`.
 
